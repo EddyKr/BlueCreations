@@ -7,8 +7,10 @@ const router = express.Router();
 // Storage for saved campaigns with UUID
 const savedCampaigns = new Map(); // key: uuid, value: campaign data
 
-// Generate 3 recommendation variations - Returns HTML/CSS and persuasion text
-router.post('/generate', async (req, res) => {
+// ===== BACK OFFICE ENDPOINTS FOR MARKETERS =====
+
+// Generate 3 recommendation variations for marketers
+router.post('/backoffice/generate', async (req, res) => {
   try {
     const { campaignObjective, additionalPrompt, category } = req.body;
     
@@ -20,7 +22,7 @@ router.post('/generate', async (req, res) => {
       });
     }
 
-    console.log('Generating 3 HTML/CSS + persuasion variations...');
+    console.log('Back office: Generating 3 variations for marketer...');
 
     // Load products from data folder
     const allProducts = multiAgentOrchestrator.loadProducts();
@@ -48,11 +50,8 @@ router.post('/generate', async (req, res) => {
       }
     }
 
-    console.log(`Using ${productList.length} products${category ? ` from category: ${category}` : ' from all categories'}`);
-
-    // Generate 3 different HTML/CSS + persuasion variations
+    // Generate 3 different variations
     const variations = await Promise.all([
-      // Variation 1: Product Cards widget
       generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt),
       generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt),
       generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt)
@@ -71,31 +70,30 @@ router.post('/generate', async (req, res) => {
       campaignObjective: campaignObjective,
       productCount: productList.length,
       category: category || 'all',
-      availableCategories: [...new Set(allProducts.map(p => p.category))],
       generatedAt: new Date().toISOString()
     };
 
     res.json(response);
     
   } catch (error) {
-    console.error('Generate endpoint error:', error);
+    console.error('Back office generate error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to generate HTML/CSS recommendations',
+      error: 'Failed to generate recommendations',
       details: error.message
     });
   }
 });
 
-// Save a generated variation to campaigns array with UUID
-router.post('/save-campaign', async (req, res) => {
+// Save a recommendation campaign for later use
+router.post('/backoffice/save-campaign', async (req, res) => {
   try {
     const { 
       campaignName,
       campaignObjective, 
       variation, 
+      targetingCriteria,
       category,
-      additionalPrompt,
       notes 
     } = req.body;
     
@@ -124,13 +122,18 @@ router.post('/save-campaign', async (req, res) => {
     // Generate UUID for the campaign
     const campaignId = uuidv4();
     
-    // Create campaign object
+    // Create campaign object with targeting criteria for agent selection
     const campaign = {
       id: campaignId,
       name: campaignName,
       objective: campaignObjective,
       category: category || 'all',
-      additionalPrompt: additionalPrompt || '',
+      targetingCriteria: targetingCriteria || {
+        segments: [],
+        interests: [],
+        demographics: {},
+        behaviors: []
+      },
       notes: notes || '',
       variation: {
         widgetType: variation.widgetType || 'product_cards',
@@ -138,6 +141,7 @@ router.post('/save-campaign', async (req, res) => {
         css: variation.css,
         text: variation.text
       },
+      status: 'active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -164,27 +168,22 @@ router.post('/save-campaign', async (req, res) => {
   }
 });
 
-// Get all saved campaigns
-router.get('/campaigns', (req, res) => {
+// Get all campaigns for back office
+router.get('/backoffice/campaigns', (req, res) => {
   try {
-    const { limit = 20, offset = 0, category, search } = req.query;
+    const { limit = 20, offset = 0, status, category } = req.query;
     
     let campaigns = Array.from(savedCampaigns.values());
+    
+    // Filter by status if specified
+    if (status) {
+      campaigns = campaigns.filter(c => c.status === status);
+    }
     
     // Filter by category if specified
     if (category && category !== 'all') {
       campaigns = campaigns.filter(c => 
         c.category.toLowerCase() === category.toLowerCase()
-      );
-    }
-    
-    // Search in name, objective, or notes
-    if (search) {
-      const searchLower = search.toLowerCase();
-      campaigns = campaigns.filter(c => 
-        c.name.toLowerCase().includes(searchLower) ||
-        c.objective.toLowerCase().includes(searchLower) ||
-        c.notes.toLowerCase().includes(searchLower)
       );
     }
     
@@ -209,8 +208,8 @@ router.get('/campaigns', (req, res) => {
         hasMore: offsetNum + limitNum < total
       },
       filters: {
-        category: category || 'all',
-        search: search || null
+        status: status || 'all',
+        category: category || 'all'
       }
     });
     
@@ -224,212 +223,177 @@ router.get('/campaigns', (req, res) => {
   }
 });
 
-// Get specific campaign by UUID
-router.get('/campaigns/:id', (req, res) => {
+// ===== FRONTEND ENDPOINT FOR USER RECOMMENDATION =====
+
+// Get personalized recommendation based on user data
+router.post('/frontend/get-recommendation', async (req, res) => {
   try {
-    const { id } = req.params;
+    const { userProfile, context } = req.body;
     
-    if (!savedCampaigns.has(id)) {
-      return res.status(404).json({
-        success: false,
-        error: 'Campaign not found'
+    console.log('Frontend: Selecting recommendation for user...');
+    
+    // Get all active campaigns
+    const activeCampaigns = Array.from(savedCampaigns.values())
+      .filter(campaign => campaign.status === 'active');
+    
+    if (activeCampaigns.length === 0) {
+      // No recommendations available - return empty as per requirement
+      return res.json({
+        success: true,
+        recommendation: null,
+        message: 'No recommendations available'
       });
     }
     
-    const campaign = savedCampaigns.get(id);
+    // Use selection agent to find best matching campaign
+    const selectedCampaign = await selectBestCampaignForUser(
+      activeCampaigns,
+      userProfile,
+      context
+    );
     
+    if (!selectedCampaign) {
+      // No matching recommendation - return empty as per requirement
+      return res.json({
+        success: true,
+        recommendation: null,
+        message: 'No matching recommendations for user profile'
+      });
+    }
+    
+    // Return the selected recommendation
     res.json({
       success: true,
-      campaign: campaign
+      recommendation: {
+        campaignId: selectedCampaign.id,
+        campaignName: selectedCampaign.name,
+        html: selectedCampaign.variation.html,
+        css: selectedCampaign.variation.css,
+        text: selectedCampaign.variation.text,
+        widgetType: selectedCampaign.variation.widgetType
+      },
+      matchReason: selectedCampaign.matchReason || 'Profile match'
     });
     
   } catch (error) {
-    console.error('Get specific campaign error:', error);
+    console.error('Frontend recommendation error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to retrieve campaign',
+      error: 'Failed to get recommendation',
       details: error.message
     });
   }
 });
 
-// Update specific campaign by UUID
-router.put('/campaigns/:id', (req, res) => {
-  try {
-    const { id } = req.params;
-    const updates = req.body;
-    
-    if (!savedCampaigns.has(id)) {
-      return res.status(404).json({
-        success: false,
-        error: 'Campaign not found'
-      });
-    }
-    
-    const existingCampaign = savedCampaigns.get(id);
-    
-    // Update campaign with new data
-    const updatedCampaign = {
-      ...existingCampaign,
-      ...updates,
-      id: existingCampaign.id, // Preserve ID
-      createdAt: existingCampaign.createdAt, // Preserve creation date
-      updatedAt: new Date().toISOString()
-    };
-    
-    savedCampaigns.set(id, updatedCampaign);
-    
-    res.json({
-      success: true,
-      message: 'Campaign updated successfully',
-      campaign: updatedCampaign
-    });
-    
-  } catch (error) {
-    console.error('Update campaign error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to update campaign',
-      details: error.message
-    });
-  }
-});
+// ===== HELPER FUNCTIONS =====
 
-// Delete specific campaign by UUID
-router.delete('/campaigns/:id', (req, res) => {
+// Selection agent logic to find best campaign for user
+async function selectBestCampaignForUser(campaigns, userProfile, context) {
   try {
-    const { id } = req.params;
-    
-    if (!savedCampaigns.has(id)) {
-      return res.status(404).json({
-        success: false,
-        error: 'Campaign not found'
-      });
+    // If no user profile provided, cannot match
+    if (!userProfile || Object.keys(userProfile).length === 0) {
+      return null;
     }
     
-    const deletedCampaign = savedCampaigns.get(id);
-    savedCampaigns.delete(id);
-    
-    res.json({
-      success: true,
-      message: 'Campaign deleted successfully',
-      deletedCampaign: {
-        id: deletedCampaign.id,
-        name: deletedCampaign.name
+    // Score each campaign based on user profile match
+    const scoredCampaigns = campaigns.map(campaign => {
+      let score = 0;
+      let matchReasons = [];
+      
+      const targeting = campaign.targetingCriteria || {};
+      
+      // Check segment matches
+      if (targeting.segments && userProfile.segments) {
+        const matchingSegments = targeting.segments.filter(segment => 
+          userProfile.segments.includes(segment)
+        );
+        score += matchingSegments.length * 10;
+        if (matchingSegments.length > 0) {
+          matchReasons.push(`Segments: ${matchingSegments.join(', ')}`);
+        }
       }
+      
+      // Check interest matches
+      if (targeting.interests && userProfile.interests) {
+        const matchingInterests = targeting.interests.filter(interest => 
+          userProfile.interests.includes(interest)
+        );
+        score += matchingInterests.length * 8;
+        if (matchingInterests.length > 0) {
+          matchReasons.push(`Interests: ${matchingInterests.join(', ')}`);
+        }
+      }
+      
+      // Check demographic matches
+      if (targeting.demographics && userProfile.demographics) {
+        const demos = targeting.demographics;
+        const userDemos = userProfile.demographics;
+        
+        // Age range check
+        if (demos.ageMin && demos.ageMax && userDemos.age) {
+          if (userDemos.age >= demos.ageMin && userDemos.age <= demos.ageMax) {
+            score += 5;
+            matchReasons.push(`Age: ${userDemos.age}`);
+          }
+        }
+        
+        // Location check
+        if (demos.location && userDemos.location) {
+          if (demos.location === userDemos.location) {
+            score += 5;
+            matchReasons.push(`Location: ${userDemos.location}`);
+          }
+        }
+      }
+      
+      // Check behavior matches
+      if (targeting.behaviors && userProfile.behaviors) {
+        const matchingBehaviors = targeting.behaviors.filter(behavior => 
+          userProfile.behaviors.includes(behavior)
+        );
+        score += matchingBehaviors.length * 6;
+        if (matchingBehaviors.length > 0) {
+          matchReasons.push(`Behaviors: ${matchingBehaviors.join(', ')}`);
+        }
+      }
+      
+      // Category preference
+      if (campaign.category && userProfile.preferences?.categories) {
+        if (userProfile.preferences.categories.includes(campaign.category)) {
+          score += 3;
+          matchReasons.push(`Category: ${campaign.category}`);
+        }
+      }
+      
+      return {
+        ...campaign,
+        score: score,
+        matchReason: matchReasons.join('; ')
+      };
     });
     
-  } catch (error) {
-    console.error('Delete campaign error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to delete campaign',
-      details: error.message
-    });
-  }
-});
-
-// Get campaigns statistics
-router.get('/campaigns-stats', (req, res) => {
-  try {
-    const campaigns = Array.from(savedCampaigns.values());
+    // Filter out campaigns with zero score (no match)
+    const matchingCampaigns = scoredCampaigns.filter(c => c.score > 0);
     
-    const stats = {
-      totalCampaigns: campaigns.length,
-      byCategory: {},
-      byWidgetType: {},
-      recentActivity: campaigns
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 5)
-        .map(c => ({
-          id: c.id,
-          name: c.name,
-          category: c.category,
-          createdAt: c.createdAt
-        }))
-    };
-    
-    // Group by category
-    campaigns.forEach(c => {
-      stats.byCategory[c.category] = (stats.byCategory[c.category] || 0) + 1;
-    });
-    
-    // Group by widget type
-    campaigns.forEach(c => {
-      const widgetType = c.variation.widgetType;
-      stats.byWidgetType[widgetType] = (stats.byWidgetType[widgetType] || 0) + 1;
-    });
-    
-    res.json({
-      success: true,
-      stats: stats
-    });
-    
-  } catch (error) {
-    console.error('Get campaigns stats error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get campaign statistics',
-      details: error.message
-    });
-  }
-});
-
-// Get available product categories
-router.get('/categories', (req, res) => {
-  try {
-    const products = multiAgentOrchestrator.loadProducts();
-    const categories = [...new Set(products.map(p => p.category))];
-    
-    res.json({
-      success: true,
-      categories: categories,
-      totalProducts: products.length,
-      productsByCategory: categories.reduce((acc, cat) => {
-        acc[cat] = products.filter(p => p.category === cat).length;
-        return acc;
-      }, {})
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to load categories',
-      details: error.message
-    });
-  }
-});
-
-// Get all available products
-router.get('/products', (req, res) => {
-  try {
-    const { category } = req.query;
-    let products = multiAgentOrchestrator.loadProducts();
-    
-    if (category) {
-      products = products.filter(p => 
-        p.category.toLowerCase() === category.toLowerCase()
-      );
+    if (matchingCampaigns.length === 0) {
+      return null; // No matching campaigns
     }
     
-    res.json({
-      success: true,
-      products: products,
-      totalCount: products.length,
-      category: category || 'all'
-    });
+    // Sort by score and return best match
+    matchingCampaigns.sort((a, b) => b.score - a.score);
+    
+    return matchingCampaigns[0];
+    
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to load products',
-      details: error.message
-    });
+    console.error('Error in campaign selection:', error);
+    return null;
   }
-});
+}
 
-// Helper function to generate HTML/CSS variation with persuasion text
+// Generate HTML/CSS variation with persuasion text
 async function generateHtmlCssVariation(widgetType, campaignObjective, productList, additionalPrompt) {
   try {
-    // Always generate persuasion text first using the LLM
+    // Generate persuasion text using LLM
     const persuasionText = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt);
 
     // Generate HTML/CSS widget using the htmlCssAgent
@@ -447,25 +411,25 @@ async function generateHtmlCssVariation(widgetType, campaignObjective, productLi
       widgetType: widgetType,
       html: html,
       css: css,
-      text: persuasionText // Always from LLM
+      text: persuasionText
     };
 
   } catch (error) {
     console.error(`Error generating ${widgetType} variation:`, error);
     
-    // Even for fallback, generate persuasion text with LLM
+    // Fallback with LLM text
     const fallbackPersuasionText = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, true);
     
     return {
       widgetType: widgetType,
       html: generateFallbackHtml(widgetType, productList),
       css: generateFallbackCss(widgetType),
-      text: fallbackPersuasionText // Still from LLM, even in fallback
+      text: fallbackPersuasionText
     };
   }
 }
 
-// Helper function to generate persuasion text using LLM
+// Generate persuasion text using LLM
 async function generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, isFallback = false) {
   try {
     const productSummary = productList.map(p => 
@@ -482,9 +446,7 @@ WIDGET TYPE: ${widgetType}
 
 ADDITIONAL REQUIREMENTS: ${additionalPrompt || 'None'}
 
-${isFallback ? 
-  'IMPORTANT: Generate fallback persuasion text that works even if technical issues occur. Focus on general product benefits and compelling call-to-action.' : 
-  `Generate compelling persuasion text that would accompany a ${widgetType} widget for these products. Make it engaging and conversion-focused.`}
+Generate compelling persuasion text that would accompany a ${widgetType} widget for these products. Make it engaging and conversion-focused.
 
 The text should be:
 - Compelling and action-oriented
@@ -496,28 +458,18 @@ Return only the persuasion text, no additional formatting or explanations.`;
 
     const persuasionResult = await multiAgentOrchestrator.specialists.persuasion.createPersuasiveContent(persuasionContext);
     
-    // Extract just the content from the result
-    return persuasionResult.content || persuasionResult.text || 'Experience premium quality and unmatched performance with our carefully selected products.';
+    return persuasionResult.content || persuasionResult.text || 'Experience premium quality with our carefully selected products.';
 
   } catch (error) {
-    console.error(`Error generating persuasion text for ${widgetType}:`, error);
-    
-    // Last resort: use a very basic template but still try to make it contextual
+    console.error(`Error generating persuasion text:`, error);
     const category = productList.length > 0 ? productList[0].category : 'sports';
-    const productCount = productList.length;
-    
-    if (productCount === 1) {
-      return `Discover the ${productList[0].name} - engineered for excellence and built to elevate your ${category} performance. Experience the difference quality makes.`;
-    } else {
-      return `Explore our premium ${category} collection featuring ${productCount} expertly selected products. Each item is chosen for quality, performance, and value. Upgrade your game today.`;
-    }
+    return `Discover our premium ${category} collection. Quality and performance guaranteed.`;
   }
 }
 
-// Helper function to extract HTML and CSS from widget code
+// Extract HTML and CSS from widget code
 function extractHtmlAndCss(widgetCode) {
   try {
-    // Look for <style> tags and extract CSS
     const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
     const styleMatches = widgetCode.match(styleRegex);
     
@@ -528,10 +480,8 @@ function extractHtmlAndCss(widgetCode) {
       }).join('\n');
     }
 
-    // Remove style tags from HTML to get clean HTML
     let html = widgetCode.replace(styleRegex, '').trim();
     
-    // If no separate CSS found, assume it's all HTML with inline styles
     if (!css && html) {
       return { html: html, css: '' };
     }
@@ -546,28 +496,9 @@ function extractHtmlAndCss(widgetCode) {
 
 // Fallback HTML generator
 function generateFallbackHtml(widgetType, productList) {
-  const products = productList.slice(0, 3); // Take first 3 products
+  const products = productList.slice(0, 3);
   
-  if (widgetType === 'banner') {
-    return `
-<div class="banner-widget">
-  <h2>Featured ${products[0]?.category || 'Sports'} Equipment</h2>
-  <div class="product-highlight">
-    <h3>${products[0]?.name || 'Premium Product'}</h3>
-    <p class="price">$${products[0]?.price || '199.99'}</p>
-    <button class="cta-button">Shop Now</button>
-  </div>
-</div>`;
-  } else if (widgetType === 'compact') {
-    return `
-<div class="compact-widget">
-  <h3>Top Pick: ${products[0]?.name || 'Premium Product'}</h3>
-  <span class="price">$${products[0]?.price || '199.99'}</span>
-  <button class="buy-btn">Buy</button>
-</div>`;
-  } else {
-    // Default to product cards
-    return `
+  return `
 <div class="product-cards-widget">
   <h2>Recommended Products</h2>
   <div class="products-grid">
@@ -581,49 +512,11 @@ function generateFallbackHtml(widgetType, productList) {
     </div>`).join('')}
   </div>
 </div>`;
-  }
 }
 
 // Fallback CSS generator  
 function generateFallbackCss(widgetType) {
-  if (widgetType === 'banner') {
-    return `
-.banner-widget {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 2rem;
-  text-align: center;
-  border-radius: 8px;
-}
-.cta-button {
-  background: #ff6b6b;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-}`;
-  } else if (widgetType === 'compact') {
-    return `
-.compact-widget {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  border: 2px solid #e1e1e1;
-  border-radius: 6px;
-}
-.buy-btn {
-  background: #28a745;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-}`;
-  } else {
-    return `
+  return `
 .product-cards-widget {
   padding: 1.5rem;
 }
@@ -647,7 +540,6 @@ function generateFallbackCss(widgetType) {
   border-radius: 4px;
   cursor: pointer;
 }`;
-  }
 }
 
 module.exports = router; 

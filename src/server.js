@@ -2,7 +2,6 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
-const conversationRoutes = require('./routes/conversation');
 const generateRoutes = require('./routes/generate');
 const { errorHandler } = require('./middleware/errorHandler');
 
@@ -43,8 +42,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes
-app.use('/', generateRoutes); // Mount generate routes at root level
-app.use('/api/conversation', conversationRoutes);
+app.use('/', generateRoutes); // Main routes for both backoffice and frontend
 
 // Health check
 app.get('/health', (req, res) => {
@@ -57,6 +55,11 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`🚀 Multi-Agent Server running on port ${PORT}`);
   console.log(`📋 Health check: http://localhost:${PORT}/health`);
-  console.log(`🎯 Generate endpoint: http://localhost:${PORT}/generate`);
-  console.log(`🌐 CORS enabled for localhost development`);
+  console.log(`🏢 Back office endpoints:`);
+  console.log(`   - Generate: POST http://localhost:${PORT}/backoffice/generate`);
+  console.log(`   - Save: POST http://localhost:${PORT}/backoffice/save-campaign`);
+  console.log(`   - View campaigns: GET http://localhost:${PORT}/backoffice/campaigns`);
+  console.log(`🌐 Frontend endpoint:`);
+  console.log(`   - Get recommendation: POST http://localhost:${PORT}/frontend/get-recommendation`);
+  console.log(`🔧 CORS enabled for localhost development`);
 }); 

@@ -21,7 +21,7 @@ class MultiAgentOrchestrator {
     
     // Storage for background-generated recommendations
     this.recommendationCache = new Map(); // key: requestHash, value: recommendations array
-    this.cacheMaxAge = 5 * 60 * 1000; // 5 minutes
+    this.cacheMaxAge = 1000 * 60 * 60 * 24; // 24 hours
     
     // Storage for saved recommendations
     this.savedRecommendations = new Map(); // key: id, value: recommendation data
