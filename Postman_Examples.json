@@ -547,6 +547,569 @@
         "description": "Budget-focused product recommendations for Alex (student athlete with budget constraints)"
       },
       "response": []
+    },
+    {
+      "name": "25. Background Recommendations Test - First Call",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"How can I improve my e-commerce conversion rate?\",\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "First call - should generate background recommendations and cache them. Check response for 'cached: false' and 'generatedRecommendations' count."
+      },
+      "response": []
+    },
+    {
+      "name": "26. Background Recommendations Test - Cached Call",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"How can I improve my e-commerce conversion rate?\",\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Identical second call - should use cached recommendations. Check response for 'cached: true'. Should be faster than the first call."
+      },
+      "response": []
+    },
+    {
+      "name": "27. Multi-Approach Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"I want to launch a new product but need help with marketing strategy, ethical considerations, and product descriptions.\",\n  \"profileId\": \"{{executiveProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Complex multi-domain request that should trigger multiple specialist recommendations in background. Maya should select the best approach."
+      },
+      "response": []
+    },
+    {
+      "name": "28. Different Profile Same Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"How can I improve my e-commerce conversion rate?\",\n  \"profileId\": \"{{businessOwnerProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Same message as test 25 but different profile - should generate new recommendations (not cached) because profile affects the hash."
+      },
+      "response": []
+    },
+    {
+      "name": "29. Get Cached Recommendations - Tech Professional",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"How can I improve my e-commerce conversion rate?\",\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations"]
+        },
+        "description": "Retrieve cached recommendations for the tech professional profile. Run this after test 25 to see the background-generated recommendations."
+      },
+      "response": []
+    },
+    {
+      "name": "30. Get Cached Recommendations - Business Owner",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"How can I improve my e-commerce conversion rate?\",\n  \"profileId\": \"{{businessOwnerProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations"]
+        },
+        "description": "Retrieve cached recommendations for the business owner profile. Run this after test 28 to see different recommendations for same message but different profile."
+      },
+      "response": []
+    },
+    {
+      "name": "31. Get Cached Recommendations - Not Found",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"This message was never sent before so no cache should exist\",\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations"]
+        },
+        "description": "Try to retrieve recommendations for a message that was never processed - should return 404 not found."
+      },
+      "response": []
+    },
+    {
+      "name": "32. Get Cache Statistics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/cache/statistics",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "cache", "statistics"]
+        },
+        "description": "Get cache statistics including total cached requests, cache age limits, and entry timestamps."
+      },
+      "response": []
+    },
+    {
+      "name": "33. Get Cache Entries",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/cache/entries",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "cache", "entries"]
+        },
+        "description": "Get overview of all cached entries with hashes, timestamps, and approach types without exposing full content."
+      },
+      "response": []
+    },
+    {
+      "name": "34. Clear Cache",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/cache",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "cache"]
+        },
+        "description": "Clear all cached recommendations. Use this to reset cache for testing or cleanup."
+      },
+      "response": []
+    },
+    {
+      "name": "35. Verify Cache Cleared",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/cache/statistics",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "cache", "statistics"]
+        },
+        "description": "Verify that cache was cleared - should show 0 total cached requests."
+      },
+      "response": []
+    },
+    {
+      "name": "36. Generate Persona-Based Recommendations",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations/generate",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations", "generate"]
+        },
+        "description": "Generate recommendations for all personas and products. This analyzes all user profiles (ignoring profile IDs) and creates a recommendation array. May take a few seconds to complete."
+      },
+      "response": []
+    },
+    {
+      "name": "37. Get All Stored Recommendations",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations/list",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations", "list"]
+        },
+        "description": "Get all stored recommendations without any filtering. Shows the complete recommendation array."
+      },
+      "response": []
+    },
+    {
+      "name": "38. Get Golf Recommendations",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations/list?sport=golf&limit=5",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations", "list"],
+          "query": [
+            {
+              "key": "sport",
+              "value": "golf"
+            },
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        },
+        "description": "Get recommendations filtered by golf interest with a limit of 5 results."
+      },
+      "response": []
+    },
+    {
+      "name": "39. Get Budget-Conscious Recommendations",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations/list?budget=budget&skill=intermediate",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations", "list"],
+          "query": [
+            {
+              "key": "budget",
+              "value": "budget"
+            },
+            {
+              "key": "skill",
+              "value": "intermediate"
+            }
+          ]
+        },
+        "description": "Get recommendations for budget-conscious users with intermediate skill level."
+      },
+      "response": []
+    },
+    {
+      "name": "40. Get Premium Recommendations",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations/list?budget=luxury&segment=executive-professional",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations", "list"],
+          "query": [
+            {
+              "key": "budget",
+              "value": "luxury"
+            },
+            {
+              "key": "segment",
+              "value": "executive-professional"
+            }
+          ]
+        },
+        "description": "Get recommendations for luxury budget users in the executive-professional segment."
+      },
+      "response": []
+    },
+    {
+      "name": "41. Quick Website Recommendations - No Filters",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations/quick",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations", "quick"]
+        },
+        "description": "Quick recommendations for website visitors with no filtering. Returns simplified format optimized for website display."
+      },
+      "response": []
+    },
+    {
+      "name": "42. Quick Website Recommendations - Hockey",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations/quick?sport=hockey&limit=3",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations", "quick"],
+          "query": [
+            {
+              "key": "sport",
+              "value": "hockey"
+            },
+            {
+              "key": "limit",
+              "value": "3"
+            }
+          ]
+        },
+        "description": "Quick hockey recommendations for website visitors with minimal data requirement."
+      },
+      "response": []
+    },
+    {
+      "name": "43. Quick Website Recommendations - Budget Tennis",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations/quick?sport=tennis&budget=budget&limit=2",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations", "quick"],
+          "query": [
+            {
+              "key": "sport",
+              "value": "tennis"
+            },
+            {
+              "key": "budget",
+              "value": "budget"
+            },
+            {
+              "key": "limit",
+              "value": "2"
+            }
+          ]
+        },
+        "description": "Quick budget tennis recommendations for website visitors."
+      },
+      "response": []
+    },
+    {
+      "name": "44. Get Recommendation Statistics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations/stats",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations", "stats"]
+        },
+        "description": "Get statistics about stored recommendations including total count, persona-based vs category-based recommendations, and generation timestamps."
+      },
+      "response": []
+    },
+    {
+      "name": "45. Clear All Recommendations",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations"]
+        },
+        "description": "Clear all stored recommendations from the system. Use this for cleanup or to force regeneration."
+      },
+      "response": []
+    },
+    {
+      "name": "46. Verify Recommendations Cleared",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/recommendations/stats",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "recommendations", "stats"]
+        },
+        "description": "Verify that recommendations were cleared - should show 0 total recommendations."
+      },
+      "response": []
+    },
+    {
+      "name": "47. Fast Product Recommendation - Golf (New Agent)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"I need golf equipment recommendations for my game\",\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Test new fast product recommendation flow - should use recommendation engine directly instead of multi-agent orchestrator. Response should be from 'Maya (Quick Recommendation Agent)'."
+      },
+      "response": []
+    },
+    {
+      "name": "48. Fast Product Recommendation - Hockey Budget (New Agent)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Looking for budget hockey gear recommendations\",\n  \"profileId\": \"{{studentAthleteProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Test fast hockey recommendations with budget keyword - should extract both sport and budget from message and use recommendation engine."
+      },
+      "response": []
+    },
+    {
+      "name": "49. Fast Product Recommendation - No Profile (New Agent)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"What sports equipment would you recommend for tennis?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Test product recommendations without user profile - should still work using category-based recommendations."
+      },
+      "response": []
+    },
+    {
+      "name": "50. Non-Product Question (Multi-Agent Flow)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"How can I optimize my website's conversion rate and reduce cart abandonment?\",\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Test non-product question - should NOT use recommendation engine and instead go through multi-agent orchestrator for analytics/conversion optimization."
+      },
+      "response": []
+    },
+    {
+      "name": "51. Mixed Request - Product + Strategy",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"I need product recommendations for my golf equipment store and marketing strategy advice\",\n  \"profileId\": \"{{businessOwnerProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Test mixed request with product recommendation keywords - should be detected as product request and use recommendation engine (since product keywords are present)."
+      },
+      "response": []
+    },
+    {
+      "name": "52. Empty Message Test (New Agent)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Test empty message with new agent - should get updated greeting focused on sports equipment recommendations."
+      },
+      "response": []
     }
   ]
 } 
