@@ -3,7 +3,7 @@
     {
       "id": "8a1b2c3d-4e5f-6789-abcd-ef1234567890",
       "creationDate": "2025-01-15T09:30:00.000Z",
-      "consentedObjectives": ["personalization", "analytics"],
+      "consentedObjectives": ["personalization", "analytics", "product_recommendations"],
       "refusedObjectives": [],
       "permissions": {
         "level": "PERSONAL"
@@ -28,6 +28,22 @@
         {
           "id": "domaingroup",
           "values": ["TECH_PROFESSIONAL"]
+        },
+        {
+          "id": "sport_interests",
+          "values": ["golf", "tennis"]
+        },
+        {
+          "id": "skill_level",
+          "values": ["intermediate"]
+        },
+        {
+          "id": "budget_range",
+          "values": ["premium"]
+        },
+        {
+          "id": "preferred_brands",
+          "values": ["TaylorMade", "Wilson"]
         }
       ],
       "replaces": [],
@@ -37,6 +53,9 @@
         },
         {
           "id": "west-coast-urban"
+        },
+        {
+          "id": "golf-enthusiast"
         }
       ]
     },
@@ -68,6 +87,22 @@
         {
           "id": "domaingroup",
           "values": ["SMALL_BUSINESS"]
+        },
+        {
+          "id": "sport_interests",
+          "values": ["soccer"]
+        },
+        {
+          "id": "skill_level",
+          "values": ["recreational"]
+        },
+        {
+          "id": "budget_range",
+          "values": ["moderate"]
+        },
+        {
+          "id": "preferred_brands",
+          "values": ["Nike", "Adidas"]
         }
       ],
       "replaces": [],
@@ -77,6 +112,127 @@
         },
         {
           "id": "business-owner"
+        },
+        {
+          "id": "soccer-parent"
+        }
+      ]
+    },
+    {
+      "id": "5c7d8e9f-1234-5678-9abc-def012345678",
+      "creationDate": "2025-03-10T16:20:00.000Z",
+      "consentedObjectives": ["personalization", "product_recommendations"],
+      "refusedObjectives": ["analytics"],
+      "permissions": {
+        "level": "PERSONAL"
+      },
+      "properties": [
+        {
+          "id": "name",
+          "values": ["Alex Thompson"]
+        },
+        {
+          "id": "age",
+          "values": ["24"]
+        },
+        {
+          "id": "location",
+          "values": ["Toronto, ON"]
+        },
+        {
+          "id": "email",
+          "values": ["alex.thompson@example.com"]
+        },
+        {
+          "id": "domaingroup",
+          "values": ["STUDENT"]
+        },
+        {
+          "id": "sport_interests",
+          "values": ["hockey", "soccer"]
+        },
+        {
+          "id": "skill_level",
+          "values": ["advanced"]
+        },
+        {
+          "id": "budget_range",
+          "values": ["budget"]
+        },
+        {
+          "id": "preferred_brands",
+          "values": ["Bauer", "CCM"]
+        }
+      ],
+      "replaces": [],
+      "segments": [
+        {
+          "id": "young-athlete"
+        },
+        {
+          "id": "hockey-player"
+        },
+        {
+          "id": "student-budget"
+        }
+      ]
+    },
+    {
+      "id": "1a2b3c4d-5e6f-7890-abcd-ef1234567890",
+      "creationDate": "2025-02-28T10:15:00.000Z",
+      "consentedObjectives": ["personalization", "analytics", "product_recommendations"],
+      "refusedObjectives": [],
+      "permissions": {
+        "level": "PREMIUM"
+      },
+      "properties": [
+        {
+          "id": "name",
+          "values": ["Jennifer Williams"]
+        },
+        {
+          "id": "age",
+          "values": ["38"]
+        },
+        {
+          "id": "location",
+          "values": ["Miami, FL"]
+        },
+        {
+          "id": "email",
+          "values": ["jennifer.williams@example.com"]
+        },
+        {
+          "id": "domaingroup",
+          "values": ["EXECUTIVE"]
+        },
+        {
+          "id": "sport_interests",
+          "values": ["golf", "tennis"]
+        },
+        {
+          "id": "skill_level",
+          "values": ["professional"]
+        },
+        {
+          "id": "budget_range",
+          "values": ["luxury"]
+        },
+        {
+          "id": "preferred_brands",
+          "values": ["Callaway", "Titleist", "Wilson"]
+        }
+      ],
+      "replaces": [],
+      "segments": [
+        {
+          "id": "executive-professional"
+        },
+        {
+          "id": "luxury-consumer"
+        },
+        {
+          "id": "competitive-golfer"
         }
       ]
     }

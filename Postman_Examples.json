@@ -19,6 +19,16 @@
       "key": "businessOwnerProfile",
       "value": "9b2c3d4e-5f67-8901-bcde-f23456789012",
       "type": "string"
+    },
+    {
+      "key": "studentAthleteProfile",
+      "value": "5c7d8e9f-1234-5678-9abc-def012345678",
+      "type": "string"
+    },
+    {
+      "key": "executiveProfile",
+      "value": "1a2b3c4d-5e6f-7890-abcd-ef1234567890",
+      "type": "string"
     }
   ],
   "item": [
@@ -397,6 +407,144 @@
           "path": ["api", "conversation", "any-session-id"]
         },
         "description": "Legacy endpoint - now returns success with info about new architecture"
+      },
+      "response": []
+    },
+    {
+      "name": "19. Product Recommendation - Golf Enthusiast",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"I'm looking for golf equipment recommendations. What would you suggest for improving my game?\",\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Golf product recommendations for Sarah (tech professional, intermediate level, premium budget, prefers TaylorMade/Wilson)"
+      },
+      "response": []
+    },
+    {
+      "name": "20. Product Recommendation - Hockey Player",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"I need new hockey gear for the upcoming season. What equipment should I buy?\",\n  \"profileId\": \"{{studentAthleteProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Hockey product recommendations for Alex (student, advanced level, budget-conscious, prefers Bauer/CCM)"
+      },
+      "response": []
+    },
+    {
+      "name": "21. Product Recommendation - Soccer Parent",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"My kid needs soccer equipment. Can you recommend some good products for recreational play?\",\n  \"profileId\": \"{{businessOwnerProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Soccer product recommendations for Miguel (business owner, recreational level, moderate budget, prefers Nike/Adidas)"
+      },
+      "response": []
+    },
+    {
+      "name": "22. Product Recommendation - Luxury Golf",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"I want the best golf equipment money can buy. Show me your premium recommendations.\",\n  \"profileId\": \"{{executiveProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Luxury golf product recommendations for Jennifer (executive, professional level, luxury budget, prefers Callaway/Titleist/Wilson)"
+      },
+      "response": []
+    },
+    {
+      "name": "23. Product Recommendation - No Profile",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"What sports equipment would you recommend?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Product recommendations without user profile (should provide general recommendations or ask for preferences)"
+      },
+      "response": []
+    },
+    {
+      "name": "24. Product Recommendation - Budget Shopping",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"I'm on a tight budget but want to get into hockey. What affordable equipment do you recommend?\",\n  \"profileId\": \"{{studentAthleteProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Budget-focused product recommendations for Alex (student athlete with budget constraints)"
       },
       "response": []
     }

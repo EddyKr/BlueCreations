@@ -27,10 +27,12 @@ class MultiAgentOrchestrator {
 1. Understand user needs from their message
 2. Coordinate with specialists when deeper expertise is needed
 3. Provide direct answers when you have sufficient knowledge
+4. Recommend products when users ask for product suggestions or shopping advice
 
 DECISION RULES:
 - Have enough context from the message → CONSULT_SPECIALISTS or ANSWER_DIRECTLY
 - Simple questions → ANSWER_DIRECTLY
+- Product/shopping requests → CONSULT_PRODUCTS
 - Focus on conversion optimization and ethical selling
 
 AVAILABLE SPECIALISTS:
@@ -40,8 +42,13 @@ AVAILABLE SPECIALISTS:
 - Jordan (UI/UX Conversion Specialist) - for optimizing page layouts and checkout flows
 - Dr. Riley (Ethics & Compliance Specialist) - for ensuring ethical marketing practices and compliance
 
+PRODUCT RECOMMENDATIONS:
+- When users ask for product suggestions, shopping advice, or mention wanting to buy something
+- Uses user profile data (sport interests, budget, skill level, brand preferences) for personalization
+- Provides tailored recommendations from available product catalog
+
 RESPONSE FORMAT:
-DECISION: [CONSULT_ANALYTICS | CONSULT_PERSUASION | CONSULT_CONTENT | CONSULT_DESIGN | CONSULT_ETHICS | ANSWER_DIRECTLY]
+DECISION: [CONSULT_ANALYTICS | CONSULT_PERSUASION | CONSULT_CONTENT | CONSULT_DESIGN | CONSULT_ETHICS | CONSULT_PRODUCTS | ANSWER_DIRECTLY]
 RESPONSE: [Your response to the user]`
     };
   }
@@ -57,6 +64,116 @@ RESPONSE: [Your response to the user]`
       console.error('Error loading user profiles:', error);
       return [];
     }
+  }
+
+  // Load products from products.json
+  loadProducts() {
+    try {
+      const productsPath = path.join(__dirname, '../data/products.json');
+      const productsData = fs.readFileSync(productsPath, 'utf8');
+      const products = JSON.parse(productsData);
+      return products.products || [];
+    } catch (error) {
+      console.error('Error loading products:', error);
+      return [];
+    }
+  }
+
+  // Get product recommendations based on user profile
+  getProductRecommendations(userProfile, limit = 3) {
+    if (!userProfile) return [];
+    
+    const products = this.loadProducts();
+    const sportInterests = this.getPropertyValues(userProfile, 'sport_interests');
+    const budgetRange = this.getPropertyValues(userProfile, 'budget_range')[0] || 'moderate';
+    const skillLevel = this.getPropertyValues(userProfile, 'skill_level')[0] || 'intermediate';
+    const preferredBrands = this.getPropertyValues(userProfile, 'preferred_brands');
+    
+    // Filter products by sport interests
+    let relevantProducts = products.filter(product => 
+      sportInterests.includes(product.category)
+    );
+    
+    // If no sport-specific products, include tennis as fallback
+    if (relevantProducts.length === 0) {
+      relevantProducts = products.filter(product => 
+        product.category === 'tennis' || sportInterests.includes(product.category)
+      );
+    }
+    
+    // Score products based on profile match
+    const scoredProducts = relevantProducts.map(product => {
+      let score = 0;
+      
+      // Brand preference bonus
+      if (preferredBrands.includes(product.brand)) {
+        score += 30;
+      }
+      
+      // Budget alignment
+      const discountedPrice = product.price * (1 - product.discount / 100);
+      if (budgetRange === 'budget' && discountedPrice <= 200) score += 25;
+      else if (budgetRange === 'moderate' && discountedPrice >= 100 && discountedPrice <= 500) score += 25;
+      else if (budgetRange === 'premium' && discountedPrice >= 200 && discountedPrice <= 800) score += 25;
+      else if (budgetRange === 'luxury' && discountedPrice >= 400) score += 25;
+      
+      // Skill level consideration (higher priced items for advanced/professional)
+      if (skillLevel === 'professional' && discountedPrice >= 500) score += 20;
+      else if (skillLevel === 'advanced' && discountedPrice >= 200) score += 15;
+      else if (skillLevel === 'intermediate' && discountedPrice >= 100 && discountedPrice <= 600) score += 15;
+      else if (skillLevel === 'recreational' && discountedPrice <= 400) score += 15;
+      
+      // Stock availability
+      if (product.stock > 10) score += 10;
+      else if (product.stock > 0) score += 5;
+      
+      // Discount bonus
+      if (product.discount > 15) score += 10;
+      else if (product.discount > 0) score += 5;
+      
+      return { ...product, score };
+    });
+    
+    // Sort by score and return top recommendations
+    return scoredProducts
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
+  }
+
+  // Helper method to get property values from user profile
+  getPropertyValues(userProfile, propertyId) {
+    if (!userProfile.properties) return [];
+    const property = userProfile.properties.find(prop => prop.id === propertyId);
+    return property ? property.values : [];
+  }
+
+  // Format product recommendations for display
+  formatProductRecommendations(recommendations, userProfile) {
+    if (recommendations.length === 0) {
+      return '\nNo specific product recommendations available based on your profile.';
+    }
+    
+    const userName = this.getPropertyValues(userProfile, 'name')[0] || 'there';
+    const sportInterests = this.getPropertyValues(userProfile, 'sport_interests');
+    
+    let output = `\n--- PERSONALIZED PRODUCT RECOMMENDATIONS FOR ${userName.toUpperCase()} ---\n`;
+    output += `Based on your interests in: ${sportInterests.join(', ')}\n\n`;
+    
+    recommendations.forEach((product, index) => {
+      const discountedPrice = product.price * (1 - product.discount / 100);
+      const savings = product.price - discountedPrice;
+      
+      output += `${index + 1}. ${product.name} by ${product.brand}\n`;
+      output += `   ${product.description}\n`;
+      output += `   Price: $${discountedPrice.toFixed(2)}`;
+      if (product.discount > 0) {
+        output += ` (was $${product.price}, save $${savings.toFixed(2)})`;
+      }
+      output += `\n   Stock: ${product.stock} available\n`;
+      output += `   Match Score: ${product.score}/100\n\n`;
+    });
+    
+    return output;
   }
 
   // Get user profile by ID
@@ -148,6 +265,7 @@ Choose the most appropriate action:
 - CONSULT_CONTENT: For generating product descriptions, marketing copy, and persuasive content
 - CONSULT_DESIGN: For optimizing page layouts, checkout flows, and UI/UX for conversions
 - CONSULT_ETHICS: For reviewing marketing practices for ethical compliance and transparency
+- CONSULT_PRODUCTS: For recommending products based on user profile and shopping intent
 - ANSWER_DIRECTLY: If you have enough information to provide a complete answer
 
 Respond in EXACTLY this format:
@@ -217,6 +335,12 @@ RESPONSE: [Your response to the user]`
       case 'CONSULT_ETHICS':
         specialistResponse = await this.specialists.ethics.reviewMarketingEthics(fullContext);
         specialistResponses.set('ETHICS', specialistResponse.review);
+        break;
+      case 'CONSULT_PRODUCTS':
+        // Handle product recommendations directly
+        const recommendations = this.getProductRecommendations(userProfile);
+        const formattedRecommendations = this.formatProductRecommendations(recommendations, userProfile);
+        specialistResponses.set('PRODUCTS', formattedRecommendations);
         break;
     }
     

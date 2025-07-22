@@ -1,0 +1,104 @@
+{
+  "products": [
+    {
+      "id": "golf-001",
+      "name": "Pro Driver X1",
+      "brand": "TaylorMade",
+      "description": "Advanced titanium driver with aerodynamic head design for maximum distance and forgiveness. Features adjustable loft and weight distribution for customized performance.",
+      "category": "golf",
+      "stock": 15,
+      "discount": 10,
+      "price": 449.99
+    },
+    {
+      "id": "golf-002", 
+      "name": "Precision Iron Set",
+      "brand": "Callaway",
+      "description": "7-piece forged iron set (5-PW, SW) designed for accuracy and control. Premium steel shafts with enhanced feel and distance control for serious golfers.",
+      "category": "golf",
+      "stock": 8,
+      "discount": 15,
+      "price": 899.99
+    },
+    {
+      "id": "golf-003",
+      "name": "Tour Pro Golf Balls",
+      "brand": "Titleist",
+      "description": "Premium 3-piece golf balls with urethane cover for exceptional spin control and soft feel around the greens. Box of 12 balls used by tour professionals.",
+      "category": "golf",
+      "stock": 45,
+      "discount": 5,
+      "price": 54.99
+    },
+    {
+      "id": "hockey-001",
+      "name": "Elite Carbon Stick",
+      "brand": "Bauer",
+      "description": "Professional-grade carbon fiber hockey stick with mid-kick point for powerful shots. Lightweight construction with enhanced puck feel and durability.",
+      "category": "hockey",
+      "stock": 22,
+      "discount": 20,
+      "price": 299.99
+    },
+    {
+      "id": "hockey-002",
+      "name": "Pro Goalie Mask",
+      "brand": "CCM",
+      "description": "Advanced protection goalie mask with carbon fiber shell and multi-density foam padding. CSA certified with superior ventilation and clear vision cage.",
+      "category": "hockey",
+      "stock": 6,
+      "discount": 0,
+      "price": 649.99
+    },
+    {
+      "id": "hockey-003",
+      "name": "Speed Skates Pro",
+      "brand": "Bauer",
+      "description": "High-performance hockey skates with thermoformable boot for custom fit. Steel runners with superior edge retention and lightweight composite quarter package.",
+      "category": "hockey",
+      "stock": 12,
+      "discount": 25,
+      "price": 799.99
+    },
+    {
+      "id": "soccer-001",
+      "name": "Championship Soccer Ball",
+      "brand": "Nike",
+      "description": "FIFA-approved match ball with aerodynamic panel design for consistent flight. Durable synthetic leather construction with superior touch and control.",
+      "category": "soccer",
+      "stock": 35,
+      "discount": 12,
+      "price": 89.99
+    },
+    {
+      "id": "soccer-002",
+      "name": "Professional Cleats",
+      "brand": "Adidas",
+      "description": "Premium leather soccer cleats with conical studs for optimal traction on firm ground. Lightweight design with enhanced ball control and comfort padding.",
+      "category": "soccer",
+      "stock": 18,
+      "discount": 18,
+      "price": 179.99
+    },
+    {
+      "id": "soccer-003",
+      "name": "Goalkeeper Gloves Elite",
+      "brand": "Reusch",
+      "description": "Professional goalkeeper gloves with superior grip palm and finger protection. Breathable backhand with adjustable wrist closure for secure fit.",
+      "category": "soccer",
+      "stock": 14,
+      "discount": 8,
+      "price": 129.99
+    },
+    {
+      "id": "tennis-001",
+      "name": "Carbon Pro Racket",
+      "brand": "Wilson",
+      "description": "High-performance tennis racket with carbon fiber frame for power and control. Optimized string pattern with comfortable grip for all playing styles.",
+      "category": "tennis",
+      "stock": 25,
+      "discount": 15,
+      "price": 249.99
+    }
+  ]
+} 
