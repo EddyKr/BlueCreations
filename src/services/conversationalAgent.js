@@ -1,96 +1,45 @@
-const { v4: uuidv4 } = require('uuid');
 const multiAgentOrchestrator = require('./multiAgentOrchestrator');
 
 class ConversationalAgent {
   constructor() {
-    this.conversations = new Map();
+    // No longer managing conversations/sessions
   }
 
-  async startConversation(initialInput = {}) {
-    const conversationId = uuidv4();
-    const conversation = {
-      id: conversationId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      messages: [],
-      state: 'active'
-    };
-
-    if (Object.keys(initialInput).length > 0) {
-      conversation.messages.push({
-        type: 'user',
-        content: initialInput,
-        timestamp: new Date()
-      });
-    }
-
-    this.conversations.set(conversationId, conversation);
-    return await this._generateMultiAgentResponse(conversation, initialInput);
-  }
-
-  async continueConversation(conversationId, userInput) {
-    const conversation = this.conversations.get(conversationId);
-    if (!conversation) {
-      throw new Error('Conversation not found');
-    }
-
-    conversation.updatedAt = new Date();
-    conversation.messages.push({
-      type: 'user',
-      content: userInput,
-      timestamp: new Date()
-    });
-    
-    return await this._generateMultiAgentResponse(conversation, userInput);
-  }
-
-  async _generateMultiAgentResponse(conversation, userInput) {
+  async processMessage(userInput = {}) {
     try {
       const userMessage = this._extractMessageText(userInput);
       
       if (!userMessage && Object.keys(userInput).length === 0) {
         return {
-          conversationId: conversation.id,
           timestamp: new Date(),
-          state: 'active',
           message: "Hello! I'm Alex, your project coordinator. How can I help you today?",
           agent: 'Alex (Project Coordinator)'
         };
       }
 
-      const multiAgentResponse = await multiAgentOrchestrator.processUserMessage(
-        userMessage, 
-        conversation.id
-      );
-
-      const response = {
-        conversationId: conversation.id,
-        timestamp: new Date(),
-        state: 'active',
-        message: multiAgentResponse.response,
-        agent: multiAgentResponse.currentAgent
+      // Create request object for multiAgentOrchestrator
+      const request = {
+        message: userMessage,
+        profileId: userInput.profileId || null
       };
 
-      conversation.messages.push({
-        type: 'multi-agent',
-        content: response,
-        timestamp: new Date()
-      });
+      const multiAgentResponse = await multiAgentOrchestrator.processUserMessage(request);
 
-      return response;
+      return {
+        timestamp: new Date(),
+        message: multiAgentResponse.response,
+        agent: multiAgentResponse.currentAgent,
+        userProfile: multiAgentResponse.userProfile
+      };
 
     } catch (error) {
       console.error('Multi-agent response error:', error);
       
-      const fallbackResponse = {
-        conversationId: conversation.id,
+      return {
         timestamp: new Date(),
-        state: 'active',
         message: "I'm having some technical difficulties. Let me try to help you directly! What can I assist you with?",
         agent: 'Alex (Fallback Mode)'
       };
-
-      return fallbackResponse;
     }
   }
 
@@ -101,16 +50,29 @@ class ConversationalAgent {
     return JSON.stringify(input);
   }
 
+  // Legacy methods for backward compatibility - now simplified
+  async startConversation(initialInput = {}) {
+    return await this.processMessage(initialInput);
+  }
+
+  async continueConversation(conversationId, userInput) {
+    // Ignore conversationId since we're not tracking sessions
+    return await this.processMessage(userInput);
+  }
+
   getConversation(conversationId) {
-    return this.conversations.get(conversationId) || null;
+    // No longer storing conversations
+    return null;
   }
 
   clearConversation(conversationId) {
-    return this.conversations.delete(conversationId);
+    // No conversations to clear
+    return true;
   }
 
   listConversations() {
-    return Array.from(this.conversations.values());
+    // No conversations to list
+    return [];
   }
 }
 

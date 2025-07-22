@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Multi-Agent System API Tests",
-    "description": "Comprehensive test collection for the Multi-Agent Orchestrator API",
+    "description": "Comprehensive test collection for the Multi-Agent Orchestrator API - Now supports user profiles and session-less processing",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -11,8 +11,13 @@
       "type": "string"
     },
     {
-      "key": "sessionId",
-      "value": "",
+      "key": "techProfessionalProfile",
+      "value": "8a1b2c3d-4e5f-6789-abcd-ef1234567890",
+      "type": "string"
+    },
+    {
+      "key": "businessOwnerProfile",
+      "value": "9b2c3d4e-5f67-8901-bcde-f23456789012",
       "type": "string"
     }
   ],
@@ -32,24 +37,7 @@
       "response": []
     },
     {
-      "name": "2. Start Conversation - General Question",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "if (pm.response.code === 200) {",
-              "    const response = pm.response.json();",
-              "    if (response.success && response.data.sessionId) {",
-              "        pm.collectionVariables.set('sessionId', response.data.sessionId);",
-              "        console.log('Session ID saved:', response.data.sessionId);",
-              "    }",
-              "}"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
+      "name": "2. Direct Message - No Profile",
       "request": {
         "method": "POST",
         "header": [
@@ -60,19 +48,203 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"message\": \"Customer Profile: Sarah, 35, busy professional mom, shops online during lunch breaks, values quick checkout and product reviews. She's browsing our premium skincare collection. Generate persuasive product messaging to encourage purchase.\"\n}"
+          "raw": "{\n  \"message\": \"I need help optimizing my e-commerce checkout process to reduce cart abandonment.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Direct message processing without user profile (should trigger Analytics Specialist)"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Direct Message - Tech Professional Profile",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"I want to implement personalized product recommendations using machine learning. What's the best approach for our tech stack?\",\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Message with tech professional profile (Sarah Johnson - 32, San Francisco, Tech Professional) - should get more technical recommendations"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Direct Message - Business Owner Profile",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"How can I improve my online store's conversion rate? I'm concerned about customer privacy and don't want invasive tracking.\",\n  \"profileId\": \"{{businessOwnerProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Message with privacy-conscious business owner profile (Miguel Rodriguez - 45, Austin, Small Business) - should respect privacy preferences"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Analytics Request - With Profile",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Analyze our current funnel: 10k visitors, 500 add-to-cart, 50 purchases. Mobile traffic is 70% but mobile conversion is only 1%. What's wrong?\",\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Analytics request with specific metrics (should trigger Analytics Specialist)"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Persuasion Content Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Create compelling messaging for abandoned cart emails. Our target audience is busy professionals aged 25-45 who value time-saving solutions.\",\n  \"profileId\": \"{{businessOwnerProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Persuasion and messaging request (should trigger Persuasion Specialist)"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Content Generation Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Generate product descriptions for our premium wireless headphones. Focus on noise cancellation, battery life, and professional use cases.\",\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Product content generation request (should trigger Content Generation Specialist)"
+      },
+      "response": []
+    },
+    {
+      "name": "8. UI/UX Design Optimization",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Our checkout page has a 68% abandonment rate. Design a better checkout flow that builds trust and reduces friction for older demographics.\",\n  \"profileId\": \"{{businessOwnerProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "UI/UX optimization request (should trigger HTML/CSS Design Specialist)"
+      },
+      "response": []
+    },
+    {
+      "name": "9. Ethics Review Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Review our marketing campaign for ethical compliance. We're using urgency tactics and limited-time offers. Are these practices ethical?\",\n  \"profileId\": \"{{businessOwnerProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Ethics and compliance review (should trigger Ethics Specialist)"
+      },
+      "response": []
+    },
+    {
+      "name": "10. Legacy Start Conversation - With Profile",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Help me create a customer acquisition strategy for my SaaS product.\",\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/conversation/start",
           "host": ["{{baseUrl}}"],
           "path": ["api", "conversation", "start"]
         },
-        "description": "Start conversation with customer profile for persuasive messaging (should trigger Persuasion Specialist)"
+        "description": "Legacy start endpoint (backward compatibility) - now processes directly without creating sessions"
       },
       "response": []
     },
     {
-      "name": "3. Continue - Analytics Trigger",
+      "name": "11. Legacy Continue Conversation",
       "request": {
         "method": "POST",
         "header": [
@@ -83,19 +255,19 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"message\": \"Customer Profile: Mike, 28, tech-savvy early adopter, compares prices across multiple sites, abandons cart frequently due to shipping costs. Current conversion rate is 2.1%. Analyze user behavior and recommend optimization strategies.\"\n}"
+          "raw": "{\n  \"message\": \"What metrics should I track for my conversion optimization efforts?\",\n  \"profileId\": \"{{businessOwnerProfile}}\"\n}"
         },
         "url": {
-          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
+          "raw": "{{baseUrl}}/api/conversation/any-id/continue",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "conversation", "{{sessionId}}", "continue"]
+          "path": ["api", "conversation", "any-id", "continue"]
         },
-        "description": "Analytics request for conversion optimization (should trigger Alex - Analytics Specialist)"
+        "description": "Legacy continue endpoint (backward compatibility) - ignores session ID and processes directly"
       },
       "response": []
     },
     {
-      "name": "4. Continue - Content Generation Request",
+      "name": "12. Empty Message Test",
       "request": {
         "method": "POST",
         "header": [
@@ -106,19 +278,19 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"message\": \"Customer Profile: Lisa, 45, luxury buyer, influenced by social proof and exclusivity, mobile shopper. Product: Premium leather handbag, $299. Generate compelling product description and email marketing copy that emphasizes craftsmanship and limited availability.\"\n}"
+          "raw": "{\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
         },
         "url": {
-          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
+          "raw": "{{baseUrl}}/api/conversation/message",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "conversation", "{{sessionId}}", "continue"]
+          "path": ["api", "conversation", "message"]
         },
-        "description": "Content generation request for luxury product (should trigger Sam - Content Generation Specialist)"
+        "description": "Test with no message (should get default greeting with profile context)"
       },
       "response": []
     },
     {
-      "name": "5. Continue - UI/UX Design Optimization",
+      "name": "13. Invalid Profile ID Test",
       "request": {
         "method": "POST",
         "header": [
@@ -129,19 +301,19 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"message\": \"Customer Profile: David, 62, less tech-savvy, prefers simple interfaces, shops for gifts for family. Current checkout abandonment rate is 68%. Optimize the checkout flow design and create trust-building elements for older demographics.\"\n}"
+          "raw": "{\n  \"message\": \"This should work even with invalid profile\",\n  \"profileId\": \"invalid-profile-id\"\n}"
         },
         "url": {
-          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
+          "raw": "{{baseUrl}}/api/conversation/message",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "conversation", "{{sessionId}}", "continue"]
+          "path": ["api", "conversation", "message"]
         },
-        "description": "UX and product strategy question (should trigger Dr. Sarah - Domain Expert B)"
+        "description": "Test with invalid profile ID (should process without profile context)"
       },
       "response": []
     },
     {
-      "name": "6. Continue - Implementation & Cost Question",
+      "name": "14. Complex Multi-Domain Question",
       "request": {
         "method": "POST",
         "header": [
@@ -152,33 +324,56 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"message\": \"What would be the estimated cost and timeline to build this e-commerce platform? Should I hire developers or use a platform like Shopify? What are the ongoing maintenance costs?\"\n}"
+          "raw": "{\n  \"message\": \"I want to build an e-commerce platform that's both high-converting and ethical. How do I balance persuasive design with transparent, honest marketing?\",\n  \"profileId\": \"{{businessOwnerProfile}}\"\n}"
         },
         "url": {
-          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
+          "raw": "{{baseUrl}}/api/conversation/message",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "conversation", "{{sessionId}}", "continue"]
+          "path": ["api", "conversation", "message"]
         },
-        "description": "Implementation and cost analysis question (should trigger Tech - Technical Advisor)"
+        "description": "Complex question that might trigger multiple specialists or synthesis"
       },
       "response": []
     },
     {
-      "name": "7. Get Conversation History",
+      "name": "15. Error Test - Missing Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"   \",\n  \"profileId\": \"{{techProfessionalProfile}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/message",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "message"]
+        },
+        "description": "Test error handling with empty/whitespace message (should return 400 error)"
+      },
+      "response": []
+    },
+    {
+      "name": "16. Get Conversation (Legacy)",
       "request": {
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}",
+          "raw": "{{baseUrl}}/api/conversation/any-session-id",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "conversation", "{{sessionId}}"]
+          "path": ["api", "conversation", "any-session-id"]
         },
-        "description": "Retrieve the full conversation history"
+        "description": "Legacy endpoint - now returns 404 with info about new architecture"
       },
       "response": []
     },
     {
-      "name": "8. List All Conversations",
+      "name": "17. List All Conversations (Legacy)",
       "request": {
         "method": "GET",
         "header": [],
@@ -187,159 +382,21 @@
           "host": ["{{baseUrl}}"],
           "path": ["api", "conversation"]
         },
-        "description": "List all active conversations"
+        "description": "Legacy endpoint - now returns empty array with info about new architecture"
       },
       "response": []
     },
     {
-      "name": "9. Start New Conversation - Technical Focus",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"message\": \"I'm a developer and I need help designing the database schema for a multi-tenant SaaS application. What's the best approach for data isolation?\"\n}"
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/conversation/start",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "conversation", "start"]
-        },
-        "description": "Start a new conversation focused on technical architecture"
-      },
-      "response": []
-    },
-    {
-      "name": "10. Start New Conversation - Empty Message",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"message\": \"\"\n}"
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/conversation/start",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "conversation", "start"]
-        },
-        "description": "Test starting conversation with empty message (should get default greeting)"
-      },
-      "response": []
-    },
-    {
-      "name": "11. Start Conversation - No Message Body",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{}"
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/conversation/start",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "conversation", "start"]
-        },
-        "description": "Test starting conversation with no message (should get default greeting)"
-      },
-      "response": []
-    },
-    {
-      "name": "12. Continue - Complex Multi-Domain Question",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"message\": \"I want to build a social media platform for artists. I need to understand the technical requirements, user experience considerations, and cost implications. How should I approach this?\"\n}"
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "conversation", "{{sessionId}}", "continue"]
-        },
-        "description": "Complex question that might trigger multiple specialists or synthesis"
-      },
-      "response": []
-    },
-    {
-      "name": "13. Error Test - Invalid Session ID",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"message\": \"This should fail\"\n}"
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/conversation/invalid-session-id/continue",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "conversation", "invalid-session-id", "continue"]
-        },
-        "description": "Test error handling with invalid session ID"
-      },
-      "response": []
-    },
-    {
-      "name": "14. Error Test - Missing Message",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"message\": \"   \"\n}"
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "conversation", "{{sessionId}}", "continue"]
-        },
-        "description": "Test error handling with empty/whitespace message"
-      },
-      "response": []
-    },
-    {
-      "name": "15. Delete Conversation",
+      "name": "18. Delete Conversation (Legacy)",
       "request": {
         "method": "DELETE",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}",
+          "raw": "{{baseUrl}}/api/conversation/any-session-id",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "conversation", "{{sessionId}}"]
+          "path": ["api", "conversation", "any-session-id"]
         },
-        "description": "Delete a conversation (use after testing to clean up)"
+        "description": "Legacy endpoint - now returns success with info about new architecture"
       },
       "response": []
     }

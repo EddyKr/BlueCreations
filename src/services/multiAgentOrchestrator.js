@@ -1,5 +1,6 @@
-const { v4: uuidv4 } = require('uuid');
 const openaiService = require('./openaiService');
+const fs = require('fs');
+const path = require('path');
 
 // Import specialist agents
 const analyticsAgent = require('./specialists/analyticsAgent');
@@ -10,7 +11,6 @@ const ethicsAgent = require('./specialists/ethicsAgent');
 
 class MultiAgentOrchestrator {
   constructor() {
-    this.sessions = new Map();
     this.specialists = {
       analytics: analyticsAgent,
       persuasion: persuasionAgent,
@@ -24,20 +24,12 @@ class MultiAgentOrchestrator {
       role: "Project Coordinator",
       systemPrompt: `You are Alex, an experienced project coordinator. Your role is to:
 
-1. Understand user needs through natural conversation
-2. Ask clarifying questions when information is unclear
-3. Coordinate with specialists when deeper expertise is needed
-4. Provide direct answers when you have sufficient knowledge
-
-CONTEXT MEMORY RULES - CRITICAL:
-- ALWAYS read the ENTIRE conversation history before responding
-- NEVER ask for information the user already provided
-- EXPLICITLY reference what they told you
-- BUILD UPON previous messages - don't start over each time
+1. Understand user needs from their message
+2. Coordinate with specialists when deeper expertise is needed
+3. Provide direct answers when you have sufficient knowledge
 
 DECISION RULES:
-- Have enough context → CONSULT_SPECIALISTS or ANSWER_DIRECTLY
-- Missing essential info → ASK_QUESTIONS
+- Have enough context from the message → CONSULT_SPECIALISTS or ANSWER_DIRECTLY
 - Simple questions → ANSWER_DIRECTLY
 - Focus on conversion optimization and ethical selling
 
@@ -49,44 +41,89 @@ AVAILABLE SPECIALISTS:
 - Dr. Riley (Ethics & Compliance Specialist) - for ensuring ethical marketing practices and compliance
 
 RESPONSE FORMAT:
-DECISION: [CONSULT_REQUIREMENTS | CONSULT_DOMAIN_A | CONSULT_DOMAIN_B | CONSULT_TECHNICAL | ANSWER_DIRECTLY | ASK_QUESTIONS]
+DECISION: [CONSULT_ANALYTICS | CONSULT_PERSUASION | CONSULT_CONTENT | CONSULT_DESIGN | CONSULT_ETHICS | ANSWER_DIRECTLY]
 RESPONSE: [Your response to the user]`
     };
   }
 
-  async processUserMessage(message, sessionId = null) {
+  // Load user profiles from personas.json
+  loadUserProfiles() {
     try {
-      // Create or get session
-      let session = this.sessions.get(sessionId);
-      if (!session) {
-        sessionId = sessionId || uuidv4();
-        this.createSession(sessionId);
-        session = this.sessions.get(sessionId);
+      const personasPath = path.join(__dirname, '../data/personas.json');
+      const personasData = fs.readFileSync(personasPath, 'utf8');
+      const personas = JSON.parse(personasData);
+      return personas.userProfiles || [];
+    } catch (error) {
+      console.error('Error loading user profiles:', error);
+      return [];
+    }
+  }
+
+  // Get user profile by ID
+  getUserProfile(profileId) {
+    if (!profileId) return null;
+    
+    const userProfiles = this.loadUserProfiles();
+    return userProfiles.find(profile => profile.id === profileId) || null;
+  }
+
+  // Format user profile for agents
+  formatUserProfileForAgents(userProfile) {
+    if (!userProfile) return '';
+    
+    let profileInfo = '\n--- USER PROFILE CONTEXT ---\n';
+    profileInfo += `User ID: ${userProfile.id}\n`;
+    profileInfo += `Permission Level: ${userProfile.permissions?.level || 'Unknown'}\n`;
+    
+    if (userProfile.properties) {
+      profileInfo += 'User Properties:\n';
+      userProfile.properties.forEach(prop => {
+        profileInfo += `- ${prop.id}: ${prop.values.join(', ')}\n`;
+      });
+    }
+    
+    if (userProfile.segments && userProfile.segments.length > 0) {
+      profileInfo += `User Segments: ${userProfile.segments.map(s => s.id).join(', ')}\n`;
+    }
+    
+    if (userProfile.consentedObjectives && userProfile.consentedObjectives.length > 0) {
+      profileInfo += `Consented Features: ${userProfile.consentedObjectives.join(', ')}\n`;
+    }
+    
+    if (userProfile.refusedObjectives && userProfile.refusedObjectives.length > 0) {
+      profileInfo += `Refused Features: ${userProfile.refusedObjectives.join(', ')}\n`;
+    }
+    
+    profileInfo += '--- END USER PROFILE ---\n\n';
+    return profileInfo;
+  }
+
+  async processUserMessage(request) {
+    try {
+      // Handle both string and JSON request formats
+      let message, profileId;
+      
+      if (typeof request === 'string') {
+        message = request;
+        profileId = null;
+      } else if (typeof request === 'object' && request.message) {
+        message = request.message;
+        profileId = request.profileId || null;
+      } else {
+        throw new Error('Invalid request format. Expected string or {message, profileId}');
       }
 
-      // Add user message
-      session.messages.push({
-        type: 'user',
-        content: message,
-        timestamp: new Date()
-      });
+      // Get user profile if profileId is provided
+      const userProfile = this.getUserProfile(profileId);
 
       // Get orchestrator decision
-      const orchestratorResponse = await this.consultOrchestrator(session);
-      
-      // Add orchestrator response
-      session.messages.push({
-        type: 'orchestrator',
-        agent: 'Alex',
-        content: orchestratorResponse,
-        timestamp: new Date()
-      });
+      const orchestratorResponse = await this.consultOrchestrator(message, userProfile);
 
       return {
-        sessionId: sessionId,
         response: orchestratorResponse,
         currentAgent: 'Alex (Project Coordinator)',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        userProfile: userProfile ? { id: userProfile.id, segments: userProfile.segments } : null
       };
 
     } catch (error) {
@@ -95,15 +132,15 @@ RESPONSE: [Your response to the user]`
     }
   }
 
-  async consultOrchestrator(session) {
-    const conversationHistory = this.formatConversationHistory(session.messages);
+  async consultOrchestrator(message, userProfile) {
+    const userProfileContext = this.formatUserProfileForAgents(userProfile);
     
     const prompt = {
       system: this.orchestratorPersonality.systemPrompt,
-      user: `CONVERSATION HISTORY:
-${conversationHistory}
+      user: `${userProfileContext}USER MESSAGE:
+${message}
 
-Analyze the conversation and determine what to do next. Consider what information is already provided and what might be missing.
+Analyze the message and determine what to do next. You MUST choose a specialist to consult or answer directly - you cannot ask questions.
 
 Choose the most appropriate action:
 - CONSULT_ANALYTICS: For analyzing user behavior, conversion metrics, and optimization opportunities
@@ -121,10 +158,10 @@ RESPONSE: [Your response to the user]`
     const response = await this.callOpenAI(prompt, 'Orchestrator');
     const decision = this.parseOrchestratorDecision(response);
     
-    if (decision.action === 'ANSWER_DIRECTLY' || decision.action === 'ASK_QUESTIONS') {
+    if (decision.action === 'ANSWER_DIRECTLY') {
       return decision.response;
     } else {
-      return await this.runSpecialistWorkflow(session, decision);
+      return await this.runSpecialistWorkflow(message, userProfile, decision);
     }
   }
 
@@ -145,70 +182,89 @@ RESPONSE: [Your response to the user]`
       }
     }
     
+    // Default to analytics if no clear decision
     if (!decision.action) {
-      decision.action = 'ASK_QUESTIONS';
+      decision.action = 'CONSULT_ANALYTICS';
     }
     
     return decision;
   }
 
-  async runSpecialistWorkflow(session, initialDecision) {
+  async runSpecialistWorkflow(message, userProfile, initialDecision) {
     let specialistResponses = new Map();
-    const conversationHistory = this.formatConversationHistory(session.messages);
+    const userProfileContext = this.formatUserProfileForAgents(userProfile);
+    const fullContext = userProfileContext + `USER MESSAGE: ${message}`;
     
     // Consult appropriate specialist
     let specialistResponse = null;
     switch (initialDecision.action) {
       case 'CONSULT_ANALYTICS':
-        specialistResponse = await this.specialists.analytics.analyzeConversion(conversationHistory);
+        specialistResponse = await this.specialists.analytics.analyzeConversion(fullContext);
         specialistResponses.set('ANALYTICS', specialistResponse.analysis);
         break;
       case 'CONSULT_PERSUASION':
-        specialistResponse = await this.specialists.persuasion.createPersuasiveContent(conversationHistory);
+        specialistResponse = await this.specialists.persuasion.createPersuasiveContent(fullContext);
         specialistResponses.set('PERSUASION', specialistResponse.content);
         break;
       case 'CONSULT_CONTENT':
-        specialistResponse = await this.specialists.textGeneration.generateProductContent(conversationHistory);
+        specialistResponse = await this.specialists.textGeneration.generateProductContent(fullContext);
         specialistResponses.set('CONTENT', specialistResponse.content);
         break;
       case 'CONSULT_DESIGN':
-        specialistResponse = await this.specialists.htmlCss.optimizePageLayout(conversationHistory, 'product_page');
+        specialistResponse = await this.specialists.htmlCss.optimizePageLayout(fullContext, 'product_page');
         specialistResponses.set('DESIGN', specialistResponse.optimization);
         break;
       case 'CONSULT_ETHICS':
-        specialistResponse = await this.specialists.ethics.reviewMarketingEthics(conversationHistory);
+        specialistResponse = await this.specialists.ethics.reviewMarketingEthics(fullContext);
         specialistResponses.set('ETHICS', specialistResponse.review);
         break;
     }
     
     // Get final synthesis
-    return await this.getFinalSynthesis(session, specialistResponses);
+    return await this.getFinalSynthesis(message, userProfile, specialistResponses);
   }
 
-  async getFinalSynthesis(session, specialistResponses) {
-    const conversationHistory = this.formatConversationHistory(session.messages);
+  async getFinalSynthesis(message, userProfile, specialistResponses) {
+    const userProfileContext = this.formatUserProfileForAgents(userProfile);
     
     let allSpecialistInput = '\n--- SPECIALIST INPUT ---\n';
     for (let [specialist, response] of specialistResponses) {
       allSpecialistInput += `${specialist}: ${response}\n\n`;
     }
     
-    const prompt = {
-      system: `You are Alex, an expert coordinator. Synthesize the specialist knowledge into a helpful, comprehensive response. Do not mention internal consultations - present as if you personally have this expertise. Provide actionable recommendations and clear next steps.`,
-      user: `User Request:
-${conversationHistory}
+    // Create system prompt based on whether profile is available
+    const hasProfile = userProfile && userProfile.id;
+    const systemPrompt = hasProfile 
+      ? `You are Alex, an expert coordinator. Synthesize the specialist knowledge into a helpful, comprehensive response. Consider the user profile information to tailor your response appropriately. Do not mention internal consultations - present as if you personally have this expertise. Provide actionable recommendations and clear next steps.`
+      : `You are Alex, an expert coordinator. Synthesize the specialist knowledge into a helpful, comprehensive response. Do not mention internal consultations - present as if you personally have this expertise. Provide actionable recommendations and clear next steps.`;
+    
+    // Create user prompt based on whether profile is available
+    const userPrompt = hasProfile
+      ? `${userProfileContext}User Request:
+${message}
 
 Expert Knowledge:
 ${allSpecialistInput}
 
-Provide a complete response that addresses the user's needs with clear recommendations and practical guidance. Structure your response logically and include specific next steps where appropriate.`
+Provide a complete response that addresses the user's needs with clear recommendations and practical guidance. Tailor your response based on the user profile information (age, location, permission level, segments, etc.). Structure your response logically and include specific next steps where appropriate.`
+      : `User Request:
+${message}
+
+Expert Knowledge:
+${allSpecialistInput}
+
+Provide a complete response that addresses the user's needs with clear recommendations and practical guidance. Base your recommendations solely on the message content and specialist analysis. Structure your response logically and include specific next steps where appropriate.`;
+    
+    const prompt = {
+      system: systemPrompt,
+      user: userPrompt
     };
 
     return await this.callOpenAI(prompt, 'Final Synthesis');
   }
 
   // New methods for direct specialist consultation
-  async consultSpecialistDirectly(specialistType, method, conversationHistory, ...args) {
+  async consultSpecialistDirectly(specialistType, method, userMessage, ...args) {
     try {
       const specialist = this.specialists[specialistType];
       if (!specialist) {
@@ -219,43 +275,11 @@ Provide a complete response that addresses the user's needs with clear recommend
         throw new Error(`Unknown method ${method} for specialist ${specialistType}`);
       }
       
-      return await specialist[method](conversationHistory, ...args);
+      return await specialist[method](userMessage, ...args);
     } catch (error) {
       console.error(`Error consulting ${specialistType} specialist:`, error);
       throw error;
     }
-  }
-
-  async getRequirementsAnalysis(sessionId, specificRequest = '') {
-    const session = this.getSession(sessionId);
-    if (!session) throw new Error('Session not found');
-    
-    const conversationHistory = this.formatConversationHistory(session.messages);
-    return await this.specialists.requirements.analyze(conversationHistory, specificRequest);
-  }
-
-  async getTechStackRecommendation(sessionId, projectType, constraints = {}) {
-    const session = this.getSession(sessionId);
-    if (!session) throw new Error('Session not found');
-    
-    const conversationHistory = this.formatConversationHistory(session.messages);
-    return await this.specialists.domainA.recommendTechStack(conversationHistory, projectType, constraints);
-  }
-
-  async getUXAnalysis(sessionId, targetUsers = '') {
-    const session = this.getSession(sessionId);
-    if (!session) throw new Error('Session not found');
-    
-    const conversationHistory = this.formatConversationHistory(session.messages);
-    return await this.specialists.domainB.analyzeUserExperience(conversationHistory, targetUsers);
-  }
-
-  async getCostEstimate(sessionId, projectScope, duration = '') {
-    const session = this.getSession(sessionId);
-    if (!session) throw new Error('Session not found');
-    
-    const conversationHistory = this.formatConversationHistory(session.messages);
-    return await this.specialists.technical.estimateCosts(conversationHistory, projectScope, duration);
   }
 
   async callOpenAI(prompt, agentName = 'System') {
@@ -266,40 +290,18 @@ Provide a complete response that addresses the user's needs with clear recommend
     });
   }
 
-  formatConversationHistory(messages) {
-    return messages.map(msg => {
-      const timestamp = new Date(msg.timestamp).toLocaleTimeString();
-      if (msg.type === 'user') {
-        return `[${timestamp}] User: ${msg.content}`;
-      } else if (msg.agent) {
-        return `[${timestamp}] ${msg.agent}: ${msg.content}`;
-      }
-      return `[${timestamp}] System: ${msg.content}`;
-    }).join('\n');
-  }
-
-  createSession(sessionId) {
-    this.sessions.set(sessionId, {
-      id: sessionId,
-      createdAt: new Date(),
-      messages: [],
-      state: 'active'
-    });
-    return sessionId;
-  }
-
-  getSession(sessionId) {
-    return this.sessions.get(sessionId);
-  }
-
   // Utility methods for getting specialist personalities
   getSpecialistPersonalities() {
-    return {
-      requirements: this.specialists.requirements.getPersonality(),
-      domainA: this.specialists.domainA.getPersonality(),
-      domainB: this.specialists.domainB.getPersonality(),
-      technical: this.specialists.technical.getPersonality()
-    };
+    const personalities = {};
+    
+    // Get personalities from available specialists
+    Object.entries(this.specialists).forEach(([key, specialist]) => {
+      if (specialist && typeof specialist.getPersonality === 'function') {
+        personalities[key] = specialist.getPersonality();
+      }
+    });
+    
+    return personalities;
   }
 
   listAvailableSpecialists() {
