@@ -1,4 +1,4 @@
-const openaiService = require('../openaiService');
+const openaiService = require("../openaiService");
 
 class HtmlCssAgent {
   constructor() {
@@ -14,6 +14,13 @@ class HtmlCssAgent {
 - Designing trust-building visual elements
 - Creating effective product galleries and showcases
 
+DESIGN PREFERENCES FOR PRODUCT WIDGETS:
+- Use full-width layouts with no outer padding or margins
+- Remove borders and border-radius for clean, modern look
+- Eliminate gaps between product cards for seamless display
+- Ensure products span the complete width of their container
+- Focus on clean, minimalist styling that emphasizes the products themselves
+
 COMMUNICATION STYLE:
 - Technical yet accessible
 - Provide specific code examples
@@ -28,11 +35,11 @@ DESIGN FRAMEWORK:
 3. Mobile-First Responsive Strategy
 4. Trust and Credibility Design
 5. Performance and Loading Optimization
-6. A/B Testing Implementation`
+6. A/B Testing Implementation`,
     };
   }
 
-  async optimizePageLayout(conversationHistory, pageType, currentLayout = '') {
+  async optimizePageLayout(conversationHistory, pageType, currentLayout = "") {
     try {
       const prompt = {
         system: this.personality.systemPrompt,
@@ -40,7 +47,7 @@ DESIGN FRAMEWORK:
 ${conversationHistory}
 
 PAGE TYPE: ${pageType}
-${currentLayout ? `CURRENT LAYOUT: ${currentLayout}` : ''}
+${currentLayout ? `CURRENT LAYOUT: ${currentLayout}` : ""}
 
 Please provide UI/UX optimization recommendations for maximum conversions:
 1. Layout structure and visual hierarchy
@@ -50,40 +57,45 @@ Please provide UI/UX optimization recommendations for maximum conversions:
 5. Performance optimization techniques
 6. Specific HTML/CSS implementation examples
 
-Focus on elements that directly impact purchase decisions and conversion rates.`
+Focus on elements that directly impact purchase decisions and conversion rates.`,
       };
 
       const response = await openaiService.createSimpleCompletion(prompt, {
         model: openaiService.getAvailableModels().GPT_4O,
         maxTokens: openaiService.getTokenLimits().EXTENDED,
-        temperature: 0.6
+        temperature: 0.6,
       });
 
       return {
         agent: this.personality.name,
         role: this.personality.role,
         optimization: response,
-        analysisType: 'page_layout',
-        timestamp: new Date().toISOString()
+        analysisType: "page_layout",
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
-      console.error('HTML/CSS Agent error:', error);
+      console.error("HTML/CSS Agent error:", error);
       throw new Error(`Layout optimization failed: ${error.message}`);
     }
   }
 
-  async designConversionElements(conversationHistory, elementType, specifications = '') {
+  async designConversionElements(
+    conversationHistory,
+    elementType,
+    specifications = ""
+  ) {
     try {
       const prompt = {
-        system: this.personality.systemPrompt + `
+        system:
+          this.personality.systemPrompt +
+          `
 
 FOCUS: Design specific UI elements that maximize conversions and user engagement.`,
         user: `CONVERSATION HISTORY:
 ${conversationHistory}
 
 ELEMENT TYPE: ${elementType}
-${specifications ? `SPECIFICATIONS: ${specifications}` : ''}
+${specifications ? `SPECIFICATIONS: ${specifications}` : ""}
 
 Please design conversion-optimized UI elements:
 1. Visual design principles for conversions
@@ -93,39 +105,40 @@ Please design conversion-optimized UI elements:
 5. Mobile optimization considerations
 6. Accessibility and usability features
 
-Provide complete code examples with explanations.`
+Provide complete code examples with explanations.`,
       };
 
       const response = await openaiService.createSimpleCompletion(prompt, {
         model: openaiService.getAvailableModels().GPT_4O,
         maxTokens: openaiService.getTokenLimits().EXTENDED,
-        temperature: 0.5
+        temperature: 0.5,
       });
 
       return {
         agent: this.personality.name,
         role: this.personality.role,
         design: response,
-        analysisType: 'conversion_elements',
-        timestamp: new Date().toISOString()
+        analysisType: "conversion_elements",
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
-      console.error('Conversion elements design error:', error);
+      console.error("Conversion elements design error:", error);
       throw new Error(`Conversion elements design failed: ${error.message}`);
     }
   }
 
-  async optimizeCheckoutFlow(conversationHistory, currentFlow = '') {
+  async optimizeCheckoutFlow(conversationHistory, currentFlow = "") {
     try {
       const prompt = {
-        system: this.personality.systemPrompt + `
+        system:
+          this.personality.systemPrompt +
+          `
 
 FOCUS: Optimize checkout flow design to minimize abandonment and maximize completion.`,
         user: `CONVERSATION HISTORY:
 ${conversationHistory}
 
-${currentFlow ? `CURRENT CHECKOUT FLOW: ${currentFlow}` : ''}
+${currentFlow ? `CURRENT CHECKOUT FLOW: ${currentFlow}` : ""}
 
 Please optimize the checkout flow for conversions:
 1. Flow structure and step optimization
@@ -135,25 +148,24 @@ Please optimize the checkout flow for conversions:
 5. Error handling and validation
 6. Mobile checkout optimization
 
-Provide specific UI/UX recommendations with implementation details.`
+Provide specific UI/UX recommendations with implementation details.`,
       };
 
       const response = await openaiService.createSimpleCompletion(prompt, {
         model: openaiService.getAvailableModels().GPT_4O,
         maxTokens: openaiService.getTokenLimits().EXTENDED,
-        temperature: 0.5
+        temperature: 0.5,
       });
 
       return {
         agent: this.personality.name,
         role: this.personality.role,
         checkoutOptimization: response,
-        analysisType: 'checkout_flow',
-        timestamp: new Date().toISOString()
+        analysisType: "checkout_flow",
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
-      console.error('Checkout flow optimization error:', error);
+      console.error("Checkout flow optimization error:", error);
       throw new Error(`Checkout flow optimization failed: ${error.message}`);
     }
   }
@@ -163,10 +175,17 @@ Provide specific UI/UX recommendations with implementation details.`
   }
 
   // ===== NEW: EMBEDDABLE RECOMMENDATION WIDGET GENERATOR =====
-  async generateRecommendationWidget(campaignObjective, productList, additionalPrompt = '', widgetType = 'product_cards') {
+  async generateRecommendationWidget(
+    campaignObjective,
+    productList,
+    additionalPrompt = "",
+    widgetType = "product_cards"
+  ) {
     try {
       const prompt = {
-        system: this.personality.systemPrompt + `
+        system:
+          this.personality.systemPrompt +
+          `
 
 FOCUS: Generate complete, embeddable HTML/CSS recommendation widgets that can be directly inserted into any website div.
 
@@ -190,7 +209,7 @@ ${JSON.stringify(productList, null, 2)}
 
 WIDGET TYPE: ${widgetType}
 
-${additionalPrompt ? `ADDITIONAL REQUIREMENTS: ${additionalPrompt}` : ''}
+${additionalPrompt ? `ADDITIONAL REQUIREMENTS: ${additionalPrompt}` : ""}
 
 Generate a complete, embeddable HTML/CSS recommendation widget that:
 
@@ -204,15 +223,15 @@ Generate a complete, embeddable HTML/CSS recommendation widget that:
 8. Can be directly copied and pasted into any website div
 9. Generate a template for the widget that can be used to generate the widget for the product list
 
-Return ONLY the complete HTML/CSS code (including <style> tags) that can be embedded. No explanations outside the code.`
+Return ONLY the complete HTML/CSS code (including <style> tags) that can be embedded. No explanations outside the code.`,
       };
 
       const response = await openaiService.createSimpleCompletion(prompt, {
         model: openaiService.getAvailableModels().GPT_4O,
         maxTokens: openaiService.getTokenLimits().EXTENDED,
-        temperature: 0.4
+        temperature: 0.4,
       });
-      console.error(response)
+      console.error(response);
       // Clean up the response to ensure it's pure HTML/CSS
       const cleanedCode = this.cleanWidgetCode(response);
 
@@ -223,11 +242,10 @@ Return ONLY the complete HTML/CSS code (including <style> tags) that can be embe
         widgetType: widgetType,
         campaignObjective: campaignObjective,
         productCount: productList.length,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
-      console.error('Widget generation error:', error);
+      console.error("Widget generation error:", error);
       throw new Error(`Widget generation failed: ${error.message}`);
     }
   }
@@ -235,16 +253,16 @@ Return ONLY the complete HTML/CSS code (including <style> tags) that can be embe
   // Clean and validate the generated widget code
   cleanWidgetCode(rawCode) {
     // Remove any markdown code blocks
-    let cleanCode = rawCode.replace(/```html|```css|```/g, '').trim();
-    
+    let cleanCode = rawCode.replace(/```html|```css|```/g, "").trim();
+
     // Ensure it starts with proper HTML
-    if (!cleanCode.startsWith('<')) {
+    if (!cleanCode.startsWith("<")) {
       // If no HTML structure, wrap in a div
       cleanCode = `<div class="recommendation-widget">\n${cleanCode}\n</div>`;
     }
-    
+
     // Add a default style block if none exists and contains HTML
-    if (cleanCode.includes('<') && !cleanCode.includes('<style')) {
+    if (cleanCode.includes("<") && !cleanCode.includes("<style")) {
       const defaultStyles = `
 <style>
 .recommendation-widget {
@@ -253,16 +271,20 @@ Return ONLY the complete HTML/CSS code (including <style> tags) that can be embe
   margin: 0 auto;
 }
 </style>`;
-      cleanCode = defaultStyles + '\n' + cleanCode;
+      cleanCode = defaultStyles + "\n" + cleanCode;
     }
-    
+
     return cleanCode;
   }
 
   // Generate multiple widget variations for A/B testing
-  async generateWidgetVariations(campaignObjective, productList, additionalPrompt = '') {
+  async generateWidgetVariations(
+    campaignObjective,
+    productList,
+    additionalPrompt = ""
+  ) {
     try {
-      const widgetTypes = ['product_cards', 'banner', 'compact'];
+      const widgetTypes = ["product_cards", "banner", "compact"];
       const variations = [];
 
       for (const widgetType of widgetTypes) {
@@ -281,14 +303,13 @@ Return ONLY the complete HTML/CSS code (including <style> tags) that can be embe
         variations: variations,
         campaignObjective: campaignObjective,
         totalVariations: variations.length,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
-      console.error('Widget variations generation error:', error);
+      console.error("Widget variations generation error:", error);
       throw new Error(`Widget variations generation failed: ${error.message}`);
     }
   }
 }
 
-module.exports = new HtmlCssAgent(); 
+module.exports = new HtmlCssAgent();
