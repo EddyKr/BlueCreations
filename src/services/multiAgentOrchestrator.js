@@ -41,7 +41,7 @@ DECISION RULES:
 AVAILABLE SPECIALISTS:
 - Sam (Requirements Analyst) - for clarifying needs and requirements analysis
 - Dr. Maya (Domain Expert A - Software Architecture) - for technical architecture and web development
-- Dr. Sarah (Domain Expert B - UX/UI & Product Strategy) - for user experience and product strategy
+- Dr. Sarah (Domain Expert B - UX/Ugit push -u origin mainI & Product Strategy) - for user experience and product strategy
 - Tech (Technical Advisor) - for implementation guidance and technical analysis
 
 RESPONSE FORMAT:

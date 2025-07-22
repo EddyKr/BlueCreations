@@ -1,0 +1,347 @@
+{
+  "info": {
+    "name": "Multi-Agent System API Tests",
+    "description": "Comprehensive test collection for the Multi-Agent Orchestrator API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        },
+        "description": "Basic health check to ensure the server is running"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Start Conversation - General Question",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    if (response.success && response.data.sessionId) {",
+              "        pm.collectionVariables.set('sessionId', response.data.sessionId);",
+              "        console.log('Session ID saved:', response.data.sessionId);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Hi! I want to build a web application for my small business. Can you help me?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/start",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "start"]
+        },
+        "description": "Start a new conversation with a general business question"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Continue - Requirements Analysis Trigger",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"I need to understand what features I should include in my e-commerce platform. I want to sell handmade jewelry online and need to know what functionality is essential.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "{{sessionId}}", "continue"]
+        },
+        "description": "Continue conversation with requirements analysis question (should trigger Sam - Requirements Analyst)"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Continue - Technical Architecture Question",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"What technology stack would you recommend for building a scalable e-commerce website? Should I use React or Vue.js for the frontend? What about the backend - Node.js or Python?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "{{sessionId}}", "continue"]
+        },
+        "description": "Technical architecture question (should trigger Dr. Maya - Domain Expert A)"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Continue - UX/Product Strategy Question",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"How should I design the user experience for my jewelry website? What's the best way to showcase products and make the checkout process smooth for customers who might not be tech-savvy?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "{{sessionId}}", "continue"]
+        },
+        "description": "UX and product strategy question (should trigger Dr. Sarah - Domain Expert B)"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Continue - Implementation & Cost Question",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"What would be the estimated cost and timeline to build this e-commerce platform? Should I hire developers or use a platform like Shopify? What are the ongoing maintenance costs?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "{{sessionId}}", "continue"]
+        },
+        "description": "Implementation and cost analysis question (should trigger Tech - Technical Advisor)"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Get Conversation History",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "{{sessionId}}"]
+        },
+        "description": "Retrieve the full conversation history"
+      },
+      "response": []
+    },
+    {
+      "name": "8. List All Conversations",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation"]
+        },
+        "description": "List all active conversations"
+      },
+      "response": []
+    },
+    {
+      "name": "9. Start New Conversation - Technical Focus",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"I'm a developer and I need help designing the database schema for a multi-tenant SaaS application. What's the best approach for data isolation?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/start",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "start"]
+        },
+        "description": "Start a new conversation focused on technical architecture"
+      },
+      "response": []
+    },
+    {
+      "name": "10. Start New Conversation - Empty Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/start",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "start"]
+        },
+        "description": "Test starting conversation with empty message (should get default greeting)"
+      },
+      "response": []
+    },
+    {
+      "name": "11. Start Conversation - No Message Body",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/start",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "start"]
+        },
+        "description": "Test starting conversation with no message (should get default greeting)"
+      },
+      "response": []
+    },
+    {
+      "name": "12. Continue - Complex Multi-Domain Question",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"I want to build a social media platform for artists. I need to understand the technical requirements, user experience considerations, and cost implications. How should I approach this?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "{{sessionId}}", "continue"]
+        },
+        "description": "Complex question that might trigger multiple specialists or synthesis"
+      },
+      "response": []
+    },
+    {
+      "name": "13. Error Test - Invalid Session ID",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"This should fail\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/invalid-session-id/continue",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "invalid-session-id", "continue"]
+        },
+        "description": "Test error handling with invalid session ID"
+      },
+      "response": []
+    },
+    {
+      "name": "14. Error Test - Missing Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"   \"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "{{sessionId}}", "continue"]
+        },
+        "description": "Test error handling with empty/whitespace message"
+      },
+      "response": []
+    },
+    {
+      "name": "15. Delete Conversation",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/conversation/{{sessionId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "conversation", "{{sessionId}}"]
+        },
+        "description": "Delete a conversation (use after testing to clean up)"
+      },
+      "response": []
+    }
+  ]
+} 
