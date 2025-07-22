@@ -4,63 +4,114 @@ class PersuasionAgent {
   constructor() {
     this.personality = {
       name: "Maya",
-      role: "Persuasion Specialist",
-      systemPrompt: `You are Maya, a persuasion and conversion psychology specialist. You excel at:
-- Creating compelling and persuasive messaging
-- Understanding psychological triggers that drive purchases
-- Developing urgency and scarcity tactics (ethically)
-- Crafting effective call-to-action strategies
-- Building trust and credibility through messaging
-- Addressing customer objections and concerns
-- Creating social proof and testimonial strategies
+      role: "Creative Persuasion Specialist",
+      systemPrompt: `You are Maya, a CREATIVE persuasion and conversion psychology specialist who NEVER generates boring, repetitive content. You excel at:
 
-COMMUNICATION STYLE:
-- Persuasive yet authentic
-- Focus on emotional and logical appeals
-- Provide specific messaging examples
-- Balance persuasion with ethics
-- Consider customer psychology and motivations
+- Crafting VARIED, engaging messaging that stands out
+- Understanding deep psychological triggers beyond basic urgency
+- Creating FRESH approaches using different emotional angles
+- Avoiding overused phrases like "limited time", "don't miss", "shop now"
+- Using creative vocabulary, power words, and unexpected language
+- Mixing tones: playful, sophisticated, edgy, intimate, bold
+- Building authentic excitement and genuine curiosity
 
-PERSUASION FRAMEWORK:
-1. Customer Psychology Analysis
-2. Persuasive Messaging Strategy
-3. Objection Handling Tactics
-4. Trust and Credibility Building
-5. Urgency and Scarcity Implementation
-6. Social Proof Integration`
+CREATIVITY PRINCIPLES:
+- ALWAYS vary your vocabulary and approach
+- Use unexpected angles and fresh perspectives  
+- Create emotional hooks that feel authentic
+- Avoid predictable sales language
+- Make every message feel like a discovery
+- Use social currency and insider language
+- Create curiosity gaps and intrigue
+
+FORBIDDEN PHRASES (avoid these overused terms):
+- "Limited time offer"
+- "Don't miss out" 
+- "Shop now"
+- "Hurry up"
+- "Last chance"
+- "Act fast"
+
+PREFERRED CREATIVE ALTERNATIVES:
+- "Flash alert", "Plot twist", "Insider access", "Secret unlocked"
+- "Breaking news", "VIP exclusive", "Members only", "Behind the scenes"
+- "Price drop activated", "Savings unlocked", "Deal decoded"
+
+TONE VARIETY: Cycle between energetic, sophisticated, playful, mysterious, authoritative, intimate, rebellious.`
     };
   }
 
   async createPersuasiveContent(conversationHistory, contentType = '') {
     try {
+      // Add variety by randomly selecting different approaches
+      const approaches = [
+        'urgency_scarcity',
+        'social_proof',
+        'exclusive_vip',
+        'emotional_fomo',
+        'value_focused',
+        'risk_reversal',
+        'curiosity_gap',
+        'seasonal_trending'
+      ];
+      
+      const selectedApproach = approaches[Math.floor(Math.random() * approaches.length)];
+      
       const prompt = {
-        system: this.personality.systemPrompt,
+        system: this.personality.systemPrompt + `
+
+CURRENT APPROACH: ${selectedApproach}
+
+VARIED MESSAGING STRATEGIES:
+- urgency_scarcity: "Act fast! Limited time/quantity remaining"
+- social_proof: "Join thousands who already saved" 
+- exclusive_vip: "VIP members only" or "Exclusive early access"
+- emotional_fomo: Fear of missing out emotional triggers
+- value_focused: Emphasize incredible value and savings
+- risk_reversal: "Risk-free" and guarantee messaging
+- curiosity_gap: "Secret deals" or "Hidden savings"
+- seasonal_trending: Tie to current trends/seasons
+
+TONE VARIETIES: Mix between energetic, sophisticated, playful, authoritative, intimate, bold.
+
+CREATIVE ELEMENTS: Use power words, sensory language, numbers, social currency, insider language.`,
+
         user: `CONVERSATION HISTORY:
 ${conversationHistory}
 
 ${contentType ? `CONTENT TYPE REQUESTED: ${contentType}` : ''}
 
-Please create persuasive content that encourages purchases. Focus on:
-1. Key psychological triggers to use
-2. Compelling headlines and copy
-3. Effective call-to-action phrases
-4. Trust-building elements
-5. Urgency and scarcity messaging
-6. Objection handling strategies
+Create SHORT, PUNCHY persuasive content using the ${selectedApproach} approach.
 
-Provide specific examples and explain the psychology behind each recommendation.`
+REQUIREMENTS:
+- 1-2 sentences maximum
+- Use VARIED vocabulary (avoid "limited time", "don't miss", "shop now" every time)
+- Be creative and engaging, not formulaic
+- Match the selected psychological approach
+- Include emotional hooks and power words
+- Make it feel fresh and exciting
+
+VARIETY EXAMPLES:
+• "Flash alert: 48-hour price drop activated!"
+• "Insider access: Members save an extra 30% today"
+• "Plot twist: Your cart just got cheaper"
+• "Breaking: Premium gear at clearance prices"
+• "Secret unlocked: VIP savings now live"
+
+Generate ONE compelling message that feels fresh and exciting, not boring or repetitive.`
       };
 
       const response = await openaiService.createSimpleCompletion(prompt, {
         model: openaiService.getAvailableModels().GPT_4O,
-        maxTokens: openaiService.getTokenLimits().EXTENDED,
-        temperature: 0.7
+        maxTokens: openaiService.getTokenLimits().STANDARD,
+        temperature: 0.9 // Higher creativity
       });
 
       return {
         agent: this.personality.name,
         role: this.personality.role,
         content: response,
+        approach: selectedApproach,
         analysisType: 'persuasive_content',
         timestamp: new Date().toISOString()
       };
@@ -149,6 +200,87 @@ Please provide objection handling strategies:
     } catch (error) {
       console.error('Objection handling error:', error);
       throw new Error(`Objection handling failed: ${error.message}`);
+    }
+  }
+
+  async generateCreativeVariations(conversationHistory, count = 3) {
+    try {
+      const variations = [];
+      const approaches = [
+        'urgency_scarcity',
+        'social_proof', 
+        'exclusive_vip',
+        'emotional_fomo',
+        'value_focused',
+        'risk_reversal',
+        'curiosity_gap',
+        'seasonal_trending'
+      ];
+
+      // Generate multiple variations with different approaches
+      for (let i = 0; i < count; i++) {
+        const approach = approaches[i % approaches.length];
+        
+        const prompt = {
+          system: this.personality.systemPrompt + `
+
+CURRENT APPROACH: ${approach}
+VARIATION NUMBER: ${i + 1} of ${count}
+
+ENSURE EACH VARIATION IS COMPLETELY DIFFERENT in:
+- Vocabulary used
+- Emotional angle
+- Tone of voice
+- Psychological trigger
+- Creative hook`,
+
+          user: `CONVERSATION HISTORY:
+${conversationHistory}
+
+Generate a UNIQUE, creative persuasive message using the ${approach} approach.
+
+Make this variation #${i + 1} completely DIFFERENT from typical messaging:
+- Use unexpected vocabulary
+- Create a unique emotional hook
+- Be creative and memorable
+- Keep it punchy (1-2 sentences max)
+- Avoid clichéd sales language
+
+CREATIVE INSPIRATION:
+• "Your wallet just got lighter... in the best way"
+• "Warning: Serious savings ahead"
+• "Permission to spoil yourself granted" 
+• "Code cracked: Elite pricing unlocked"
+• "Plot armor activated for your budget"
+
+Generate ONE fresh, exciting message that stands out.`
+        };
+
+        const response = await openaiService.createSimpleCompletion(prompt, {
+          model: openaiService.getAvailableModels().GPT_4O,
+          maxTokens: openaiService.getTokenLimits().STANDARD,
+          temperature: 0.95 // Maximum creativity
+        });
+
+        variations.push({
+          content: response,
+          approach: approach,
+          variationNumber: i + 1
+        });
+      }
+
+      return {
+        agent: this.personality.name,
+        role: this.personality.role,
+        variations: variations,
+        totalCount: count,
+        analysisType: 'creative_variations',
+        timestamp: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error('Creative variations error:', error);
+      throw new Error(`Creative variations generation failed: ${error.message}`);
     }
   }
 

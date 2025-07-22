@@ -525,38 +525,59 @@ async function generateHtmlCssVariation(widgetType, campaignObjective, productLi
 // Generate persuasion text using LLM
 async function generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, isFallback = false) {
   try {
-    const productSummary = productList.map(p => 
-      `${p.name} by ${p.brand} - $${p.price}${p.discount ? ` (${p.discount}% off)` : ''}`
-    ).join('\n');
+    // Extract pricing psychology data without product details
+    const hasDiscounts = productList.some(p => p.discount && p.discount > 0);
+    const maxDiscount = hasDiscounts ? Math.max(...productList.map(p => p.discount || 0)) : 0;
+    const priceRange = productList.length > 0 ? {
+      min: Math.min(...productList.map(p => parseFloat(p.price))),
+      max: Math.max(...productList.map(p => parseFloat(p.price)))
+    } : { min: 0, max: 0 };
+    const category = productList.length > 0 ? productList[0].category : 'products';
     
     const persuasionContext = `
 CAMPAIGN OBJECTIVE: ${campaignObjective}
 
-PRODUCTS TO PROMOTE:
-${productSummary}
+PRICING CONTEXT:
+- Product Category: ${category}
+- Has Special Offers: ${hasDiscounts ? 'Yes' : 'No'}
+- Maximum Discount Available: ${maxDiscount}%
+- Price Range: $${priceRange.min} - $${priceRange.max}
+- Number of Products: ${productList.length}
 
 WIDGET TYPE: ${widgetType}
 
 ADDITIONAL REQUIREMENTS: ${additionalPrompt || 'None'}
 
-Generate compelling persuasion text that would accompany a ${widgetType} widget for these products. Make it engaging and conversion-focused.
+Generate compelling, price-focused persuasion text that would accompany a ${widgetType} widget. 
 
 The text should be:
-- Compelling and action-oriented
-- Focused on the products and campaign objective
-- Appropriate for the ${widgetType} widget format
-- Ready to use as marketing copy
+- PRICE-FOCUSED and deal-oriented (don't mention specific product names/brands)
+- SHORT and punchy (2-3 sentences max)
+- Action-oriented with urgency
+- Focused on savings, value, and limited-time offers
+- General enough to work with any products in this category
+- Include strong call-to-action language
+
+Examples of good price-focused persuasion:
+"Limited time offer! Save up to 25% on premium gear. Don't miss these exclusive deals!"
+"Unbeatable prices on quality products! Shop now and save big before it's too late!"
+"Flash sale ends soon! Get the best deals of the season while supplies last!"
 
 Return only the persuasion text, no additional formatting or explanations.`;
 
     const persuasionResult = await multiAgentOrchestrator.specialists.persuasion.createPersuasiveContent(persuasionContext);
     
-    return persuasionResult.content || persuasionResult.text || 'Experience premium quality with our carefully selected products.';
+    return persuasionResult.content || persuasionResult.text || `Limited time offers on premium ${category}! Save up to ${maxDiscount}% - shop now!`;
 
   } catch (error) {
     console.error(`Error generating persuasion text:`, error);
-    const category = productList.length > 0 ? productList[0].category : 'sports';
-    return `Discover our premium ${category} collection. Quality and performance guaranteed.`;
+    const category = productList.length > 0 ? productList[0].category : 'products';
+    const hasDiscounts = productList.some(p => p.discount && p.discount > 0);
+    const maxDiscount = hasDiscounts ? Math.max(...productList.map(p => p.discount || 0)) : 0;
+    
+    return hasDiscounts 
+      ? `Exclusive deals on ${category}! Save up to ${maxDiscount}% - limited time only!`
+      : `Discover premium ${category} at unbeatable prices. Shop now for the best selection!`;
   }
 }
 
