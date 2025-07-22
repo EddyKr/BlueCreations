@@ -111,6 +111,114 @@
 			}
 		},
 		{
+			"name": "Client - Get Recommendation by Campaign ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/client/recommendation?campaignId={{campaign_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"client",
+						"recommendation"
+					],
+					"query": [
+						{
+							"key": "campaignId",
+							"value": "{{campaign_id}}"
+						}
+					]
+				},
+				"description": "Get specific campaign by ID from client-side"
+			}
+		},
+		{
+			"name": "Client - Get Recommendation by Category",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/client/recommendation?category=tennis",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"client",
+						"recommendation"
+					],
+					"query": [
+						{
+							"key": "category",
+							"value": "tennis"
+						}
+					]
+				},
+				"description": "Get recommendation filtered by category"
+			}
+		},
+		{
+			"name": "Client - Get Recommendation by Multiple Criteria",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/client/recommendation?category=tennis&segment=sports_enthusiast&interest=tennis&location=USA",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"client",
+						"recommendation"
+					],
+					"query": [
+						{
+							"key": "category",
+							"value": "tennis"
+						},
+						{
+							"key": "segment",
+							"value": "sports_enthusiast"
+						},
+						{
+							"key": "interest",
+							"value": "tennis"
+						},
+						{
+							"key": "location",
+							"value": "USA"
+						}
+					]
+				},
+				"description": "Get recommendation using multiple query criteria"
+			}
+		},
+		{
+			"name": "Client - Get Recommendation by Campaign Name",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/client/recommendation?campaignName=tennis",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"client",
+						"recommendation"
+					],
+					"query": [
+						{
+							"key": "campaignName",
+							"value": "tennis"
+						}
+					]
+				},
+				"description": "Get recommendation by searching campaign name"
+			}
+		},
+		{
 			"name": "Frontend - Get Recommendation (Match Found)",
 			"request": {
 				"method": "POST",
@@ -197,6 +305,12 @@
 			"key": "base_url",
 			"value": "http://localhost:3000",
 			"type": "string"
+		},
+		{
+			"key": "campaign_id",
+			"value": "set-after-saving-campaign",
+			"type": "string",
+			"description": "Set this to a valid campaign UUID after saving a campaign"
 		}
 	]
 } 

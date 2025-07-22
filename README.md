@@ -1,6 +1,6 @@
 # 🎯 AI-Powered Recommendation System
 
-A multi-agent recommendation system where marketers create targeted campaigns in a back office, and an intelligent selection agent determines which recommendation to show each user on the frontend.
+A multi-agent recommendation system where marketers create targeted campaigns in a back office, and intelligent selection provides recommendations to frontend users via multiple endpoints.
 
 ## 🏗️ System Architecture
 
@@ -10,8 +10,8 @@ A multi-agent recommendation system where marketers create targeted campaigns in
 │   (Marketer)    │─────▶│   AI Agents     │◀─────│     (User)      │
 └─────────────────┘      └─────────────────┘      └─────────────────┘
        │                         │                         │
-       │ Generate & Save         │ Selection Agent        │ Get Recommendation
-       │ Campaigns              │ Matches User            │ Based on Profile
+       │ Generate & Save         │ Profile Agent          │ GET /client/
+       │ Campaigns              │ Selection Agent        │ POST /frontend/
        ▼                         ▼                         ▼
 ```
 
@@ -26,6 +26,17 @@ npm start
 
 # Server runs on http://localhost:3000
 ```
+
+## 🔗 **Available Endpoints**
+
+### **Back Office (Marketers)**
+- `POST /backoffice/generate` - Generate 3 HTML/CSS variations
+- `POST /backoffice/save-campaign` - Save campaigns with targeting
+- `GET /backoffice/campaigns` - View saved campaigns
+
+### **Frontend (Users)**  
+- `POST /frontend/get-recommendation` - Profile-based selection agent
+- `GET /client/recommendation` - Query-based recommendation retrieval
 
 ## 📋 Application Flow
 
@@ -108,6 +119,51 @@ POST /frontend/get-recommendation
   "success": true,
   "recommendation": null,
   "message": "No matching recommendations"
+}
+```
+
+### 3️⃣ **Client-Side - Query-Based Recommendation Retrieval**
+Client-side endpoint that matches saved recommendations using query string parameters:
+
+```bash
+# Get by specific campaign name (used as ID)
+GET /client/recommendation?campaignId=Premium-Tennis-Tournament-Prep
+
+# Get by category
+GET /client/recommendation?category=tennis
+
+# Get by multiple criteria
+GET /client/recommendation?category=tennis&segment=sports_enthusiast&location=USA
+
+# Get by campaign name search
+GET /client/recommendation?campaignName=tennis
+
+# Available query parameters:
+# - campaignId: Exact campaign name (campaigns are now identified by name)
+# - category: Product category (tennis, golf, hockey, soccer)
+# - campaignName: Search in campaign names (partial match)
+# - segment: Target segment (sports_enthusiast, high_value_customer, etc.)
+# - interest: Target interest (tennis, fitness, competitive_sports, etc.)
+# - location: Target location (USA, Canada, etc.)
+# - status: Campaign status (default: active)
+
+# Response format:
+{
+  "success": true,
+  "recommendation": {
+    "campaignId": "Premium-Tennis-Tournament-Prep",
+    "campaignName": "Premium Tennis Tournament Prep",
+    "category": "tennis",
+    "html": "<div>...</div>",
+    "css": ".styles {...}",
+    "text": "Marketing copy...",
+    "widgetType": "product_cards"
+  },
+  "matchCriteria": {
+    "category": "tennis",
+    "segment": "sports_enthusiast"
+  },
+  "totalMatches": 3
 }
 ```
 

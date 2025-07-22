@@ -1,11 +1,10 @@
 const express = require('express');
-const { v4: uuidv4 } = require('uuid');
 const multiAgentOrchestrator = require('../services/multiAgentOrchestrator');
 
 const router = express.Router();
 
-// Storage for saved campaigns with UUID
-const savedCampaigns = new Map(); // key: uuid, value: campaign data
+// Storage for saved campaigns
+const savedCampaigns = new Map(); // key: campaign name, value: campaign data
 
 // ===== BACK OFFICE ENDPOINTS FOR MARKETERS =====
 
@@ -119,12 +118,17 @@ router.post('/backoffice/save-campaign', async (req, res) => {
       });
     }
     
-    // Generate UUID for the campaign
-    const campaignId = uuidv4();
+    // Check if campaign name already exists
+    if (savedCampaigns.has(campaignName)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Campaign name already exists. Please choose a different name.'
+      });
+    }
     
     // Create campaign object with targeting criteria for agent selection
     const campaign = {
-      id: campaignId,
+      id: campaignName, // Use campaign name as ID
       name: campaignName,
       objective: campaignObjective,
       category: category || 'all',
@@ -146,15 +150,16 @@ router.post('/backoffice/save-campaign', async (req, res) => {
       updatedAt: new Date().toISOString()
     };
     
-    // Save to storage
-    savedCampaigns.set(campaignId, campaign);
+    // Save to storage using campaign name as key
+    savedCampaigns.set(campaignName, campaign);
     
-    console.log(`Campaign saved with ID: ${campaignId}`);
+    console.log(`Campaign saved with name: ${campaignName}`);
     
     res.json({
       success: true,
       message: 'Campaign saved successfully',
-      campaignId: campaignId,
+      campaignId: campaignName, // Return campaign name as ID
+      campaignName: campaignName,
       campaign: campaign
     });
     
@@ -284,6 +289,83 @@ router.post('/frontend/get-recommendation', async (req, res) => {
     });
   }
 });
+
+// ===== CLIENT-SIDE ENDPOINT FOR QUERY-BASED RECOMMENDATION =====
+
+// Get recommendation based on query string parameters
+router.get('/client/recommendation', (req, res) => {
+  try {
+    const { 
+      campaignName,
+      status = 'active'
+    } = req.query;
+    
+    console.log('Client: Retrieving recommendation by query parameters...');
+    
+    // Get all campaigns with specified status
+    let campaigns = Array.from(savedCampaigns.values())
+      .filter(campaign => campaign.status === status);
+    
+    if (campaigns.length === 0) {
+      return res.json({
+        success: true,
+        recommendation: null,
+        message: 'No active recommendations available'
+      });
+    }
+    
+    // Filter by campaign name if provided
+    if (campaignName) {
+      campaigns = campaigns.filter(c => 
+        c.name.toLowerCase().includes(campaignName.toLowerCase())
+      );
+    }
+
+    if (campaigns.length === 0) {
+      return res.json({
+        success: true,
+        recommendation: null,
+        message: 'No recommendations match the query criteria'
+      });
+    }
+    
+    // Sort by creation date and return the most recent match
+    campaigns.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const selectedCampaign = campaigns[0];
+    
+    // Build match criteria for response
+    const matchCriteria = {};
+    if (campaignName) matchCriteria.campaignName = campaignName;
+    
+    res.json({
+      success: true,
+      recommendation: formatRecommendationResponse(selectedCampaign),
+      matchCriteria: matchCriteria,
+      totalMatches: campaigns.length
+    });
+    
+  } catch (error) {
+    console.error('Client recommendation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get recommendation',
+      details: error.message
+    });
+  }
+});
+
+// Helper function to format recommendation response
+function formatRecommendationResponse(campaign) {
+  return {
+    campaignId: campaign.id,
+    campaignName: campaign.name,
+    category: campaign.category,
+    html: campaign.variation.html,
+    css: campaign.variation.css,
+    text: campaign.variation.text,
+    createdAt: campaign.createdAt
+  };
+}
 
 // ===== HELPER FUNCTIONS =====
 

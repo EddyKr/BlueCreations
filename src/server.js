@@ -59,7 +59,8 @@ app.listen(PORT, () => {
   console.log(`   - Generate: POST http://localhost:${PORT}/backoffice/generate`);
   console.log(`   - Save: POST http://localhost:${PORT}/backoffice/save-campaign`);
   console.log(`   - View campaigns: GET http://localhost:${PORT}/backoffice/campaigns`);
-  console.log(`🌐 Frontend endpoint:`);
-  console.log(`   - Get recommendation: POST http://localhost:${PORT}/frontend/get-recommendation`);
+  console.log(`🌐 Frontend endpoints:`);
+  console.log(`   - Get recommendation (profile-based): POST http://localhost:${PORT}/frontend/get-recommendation`);
+  console.log(`   - Get recommendation (query-based): GET http://localhost:${PORT}/client/recommendation`);
   console.log(`🔧 CORS enabled for localhost development`);
 }); 
