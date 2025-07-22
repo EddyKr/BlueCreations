@@ -5,169 +5,51 @@ class HtmlCssAgent {
     this.personality = {
       name: "Jordan",
       role: "UI/UX Conversion Specialist",
-      systemPrompt: `You are Jordan, a UI/UX specialist focused on conversion optimization. You excel at:
-- Designing high-converting landing pages and product pages
-- Optimizing checkout flows and forms
-- Creating effective visual hierarchy for sales
-- Implementing mobile-first responsive design
-- Optimizing page load speeds for conversions
-- Designing trust-building visual elements
-- Creating effective product galleries and showcases
+      systemPrompt: `NIKE-INSPIRED DESIGN SYSTEM:
 
-DESIGN PREFERENCES FOR PRODUCT WIDGETS:
-- Use full-width layouts with no outer padding or margins
-- Remove borders and border-radius for clean, modern look
-- Eliminate gaps between product cards for seamless display
-- Ensure products span the complete width of their container
-- Focus on clean, minimalist styling that emphasizes the products themselves
+PRODUCT CARDS:
+- Image above all the text
+- Product Title: 20-28px font size, 600-800 font weight, sans-serif, dark text (#111 or #000)
+- Product Description: 16-20px font size, 300-500 font weight, sans-serif, MUST BE VISIBLE - use dark gray (#333 or #555) for readability
+- Price: 20-28px font size, 600-800 font weight, sans-serif, dark text (#111 or #000)
+- Button: 0-50px border radius, black/white high contrast
+- Button Text: 600-800 font weight, uppercase preferred
+- Layout: Clean grid, minimal gaps, high impact visuals
+- Background: Light backgrounds (#FFF, #F5F5F5, #FAFAFA) with dark text for contrast
+
+BANNER DESIGN:
+- Header: 32-48px, "Work Sans" font, 600-800 weight, 8 words max
+- Body: 16-20px, "Work Sans" font, 200-500 weight, 20 words max
+- Style: Bold, motivational, athletic aesthetic
+- Layout: Full-width, high contrast, minimal design
+
+GENERAL PRINCIPLES:
+- Bold, athletic, performance-focused aesthetic
+- High contrast black/white color scheme
+- Minimal, impactful design with strong CTAs
+- Mobile-first responsive approach
+- Clean typography with strong hierarchy
+- Full-width layouts with edge-to-edge imagery
 
 COMMUNICATION STYLE:
-- Technical yet accessible
-- Provide specific code examples
-- Focus on conversion impact
-- Consider mobile and accessibility
-- Balance aesthetics with functionality
-- Use data-driven design principles
+- Provide complete HTML/CSS code
+- Focus on conversion and performance
+- Create bold, confident designs
+- Emphasize product imagery
+- Use Nike's "Just Do It" energy
 
-DESIGN FRAMEWORK:
-1. Conversion-Focused Layout Analysis
-2. Visual Hierarchy Optimization
-3. Mobile-First Responsive Strategy
-4. Trust and Credibility Design
-5. Performance and Loading Optimization
-6. A/B Testing Implementation`,
+HTML STRUCTURE:
+<div class="product-card">
+  <div class="product-image" style="background-image: url('https://via.placeholder.com/300');"></div>
+  <div class="product-content">
+    <h2 class="product-title">Pro Driver X1</h2>
+    <p class="product-price">$404.99</p>
+    <p class="product-description">Advanced titanium driver with aerodynamic head design for maximum distance and forgiveness.</p>
+    <a href="#" class="product-button">Buy Now</a>
+  </div>
+</div>
+`,
     };
-  }
-
-  async optimizePageLayout(conversationHistory, pageType, currentLayout = "") {
-    try {
-      const prompt = {
-        system: this.personality.systemPrompt,
-        user: `CONVERSATION HISTORY:
-${conversationHistory}
-
-PAGE TYPE: ${pageType}
-${currentLayout ? `CURRENT LAYOUT: ${currentLayout}` : ""}
-
-Please provide UI/UX optimization recommendations for maximum conversions:
-1. Layout structure and visual hierarchy
-2. Key conversion elements placement
-3. Mobile responsiveness considerations
-4. Trust signals and credibility design
-5. Performance optimization techniques
-6. Specific HTML/CSS implementation examples
-
-Focus on elements that directly impact purchase decisions and conversion rates.`,
-      };
-
-      const response = await openaiService.createSimpleCompletion(prompt, {
-        model: openaiService.getAvailableModels().GPT_4O,
-        maxTokens: openaiService.getTokenLimits().EXTENDED,
-        temperature: 0.6,
-      });
-
-      return {
-        agent: this.personality.name,
-        role: this.personality.role,
-        optimization: response,
-        analysisType: "page_layout",
-        timestamp: new Date().toISOString(),
-      };
-    } catch (error) {
-      console.error("HTML/CSS Agent error:", error);
-      throw new Error(`Layout optimization failed: ${error.message}`);
-    }
-  }
-
-  async designConversionElements(
-    conversationHistory,
-    elementType,
-    specifications = ""
-  ) {
-    try {
-      const prompt = {
-        system:
-          this.personality.systemPrompt +
-          `
-
-FOCUS: Design specific UI elements that maximize conversions and user engagement.`,
-        user: `CONVERSATION HISTORY:
-${conversationHistory}
-
-ELEMENT TYPE: ${elementType}
-${specifications ? `SPECIFICATIONS: ${specifications}` : ""}
-
-Please design conversion-optimized UI elements:
-1. Visual design principles for conversions
-2. HTML structure and semantic markup
-3. CSS styling for trust and appeal
-4. Interactive states and animations
-5. Mobile optimization considerations
-6. Accessibility and usability features
-
-Provide complete code examples with explanations.`,
-      };
-
-      const response = await openaiService.createSimpleCompletion(prompt, {
-        model: openaiService.getAvailableModels().GPT_4O,
-        maxTokens: openaiService.getTokenLimits().EXTENDED,
-        temperature: 0.5,
-      });
-
-      return {
-        agent: this.personality.name,
-        role: this.personality.role,
-        design: response,
-        analysisType: "conversion_elements",
-        timestamp: new Date().toISOString(),
-      };
-    } catch (error) {
-      console.error("Conversion elements design error:", error);
-      throw new Error(`Conversion elements design failed: ${error.message}`);
-    }
-  }
-
-  async optimizeCheckoutFlow(conversationHistory, currentFlow = "") {
-    try {
-      const prompt = {
-        system:
-          this.personality.systemPrompt +
-          `
-
-FOCUS: Optimize checkout flow design to minimize abandonment and maximize completion.`,
-        user: `CONVERSATION HISTORY:
-${conversationHistory}
-
-${currentFlow ? `CURRENT CHECKOUT FLOW: ${currentFlow}` : ""}
-
-Please optimize the checkout flow for conversions:
-1. Flow structure and step optimization
-2. Form design and field optimization
-3. Trust signals and security indicators
-4. Progress indicators and feedback
-5. Error handling and validation
-6. Mobile checkout optimization
-
-Provide specific UI/UX recommendations with implementation details.`,
-      };
-
-      const response = await openaiService.createSimpleCompletion(prompt, {
-        model: openaiService.getAvailableModels().GPT_4O,
-        maxTokens: openaiService.getTokenLimits().EXTENDED,
-        temperature: 0.5,
-      });
-
-      return {
-        agent: this.personality.name,
-        role: this.personality.role,
-        checkoutOptimization: response,
-        analysisType: "checkout_flow",
-        timestamp: new Date().toISOString(),
-      };
-    } catch (error) {
-      console.error("Checkout flow optimization error:", error);
-      throw new Error(`Checkout flow optimization failed: ${error.message}`);
-    }
   }
 
   getPersonality() {
@@ -190,24 +72,6 @@ Provide specific UI/UX recommendations with implementation details.`,
 
 FOCUS: Generate complete, embeddable HTML/CSS recommendation widgets that can be directly inserted into any website div.
 
-WIDGET GENERATION RULES:
-- Create self-contained HTML/CSS code
-- Use inline CSS or embedded <style> tags (no external dependencies)
-- Ensure mobile-responsive design
-- Include proper accessibility attributes
-- Use semantic HTML structure
-- Generate modern, clean, conversion-focused design
-- Make it ready for copy-paste embedding
-
-AVAILABLE WIDGET TYPES:
-- product_cards: Individual product cards in a grid/flex layout`,
-
-        user: `CAMPAIGN OBJECTIVE:
-${campaignObjective}
-
-PRODUCT LIST (maximum 3 products):
-${JSON.stringify(productList, null, 2)}
-
 WIDGET TYPE: ${widgetType}
 
 ${brandStyling ? `BRAND STYLING (use these for styling):
@@ -217,11 +81,6 @@ COLORS:
 - Accent: ${brandStyling.colors.accent}
 - Text: ${brandStyling.colors.text}
 - Background: ${brandStyling.colors.background}
-
-FONTS (include Google Fonts imports):
-- Primary Font: '${brandStyling.fonts.primary}' (for headings and important text)
-- Secondary Font: '${brandStyling.fonts.secondary}' (for body text and descriptions)
-- Fallback: ${brandStyling.fonts.fallback}
 
 IMPORTANT: 
 1. Include Google Fonts import in your CSS: @import url('https://fonts.googleapis.com/css2?family=${brandStyling.fonts.primary.replace(' ', '+')}:wght@400;500;600;700&family=${brandStyling.fonts.secondary.replace(' ', '+')}:wght@300;400;500&display=swap');
@@ -253,7 +112,7 @@ Return ONLY the complete HTML/CSS code (including <style> tags) that can be embe
       const response = await openaiService.createSimpleCompletion(prompt, {
         model: openaiService.getAvailableModels().GPT_4O,
         maxTokens: openaiService.getTokenLimits().EXTENDED,
-        temperature: 0.4,
+        temperature: 0.2,
       });
       console.error(response);
       // Clean up the response to ensure it's pure HTML/CSS

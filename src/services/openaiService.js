@@ -36,10 +36,10 @@ class OpenAIService {
       maxTokens = this.config.MAX_TOKENS.STANDARD,
       temperature = 0.7
     } = options;
-
+    console.error(prompt)
     const messages = [
-      { role: 'system', content: prompt.system },
-      { role: 'user', content: prompt.user }
+      { role: 'system', content: prompt.system || '' },
+      { role: 'user', content: prompt.user || ''}
     ];
 
     const response = await this.client.chat.completions.create({
@@ -48,7 +48,7 @@ class OpenAIService {
       max_tokens: maxTokens,
       temperature
     });
-
+    console.error(response)
     return response.choices[0].message.content;
   }
 
