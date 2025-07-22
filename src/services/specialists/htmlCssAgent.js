@@ -180,12 +180,7 @@ WIDGET GENERATION RULES:
 - Make it ready for copy-paste embedding
 
 AVAILABLE WIDGET TYPES:
-- product_cards: Individual product cards in a grid/flex layout
-- banner: Horizontal banner with products
-- carousel: Scrollable product carousel
-- list: Vertical list with product details
-- hero: Large featured recommendation section
-- compact: Minimal space-efficient design`,
+- product_cards: Individual product cards in a grid/flex layout`,
 
         user: `CAMPAIGN OBJECTIVE:
 ${campaignObjective}
@@ -207,6 +202,7 @@ Generate a complete, embeddable HTML/CSS recommendation widget that:
 6. Includes hover effects and micro-interactions
 7. Has proper semantic HTML structure
 8. Can be directly copied and pasted into any website div
+9. Generate a template for the widget that can be used to generate the widget for the product list
 
 Return ONLY the complete HTML/CSS code (including <style> tags) that can be embedded. No explanations outside the code.`
       };
@@ -216,7 +212,7 @@ Return ONLY the complete HTML/CSS code (including <style> tags) that can be embe
         maxTokens: openaiService.getTokenLimits().EXTENDED,
         temperature: 0.4
       });
-
+      console.error(response)
       // Clean up the response to ensure it's pure HTML/CSS
       const cleanedCode = this.cleanWidgetCode(response);
 

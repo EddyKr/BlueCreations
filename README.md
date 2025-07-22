@@ -30,7 +30,7 @@ npm start
 ## 🔗 **Available Endpoints**
 
 ### **Back Office (Marketers)**
-- `POST /backoffice/generate` - Generate 3 HTML/CSS variations
+- `POST /backoffice/generate` - Generate 3 HTML/CSS variations with React templates
 - `POST /backoffice/save-campaign` - Save campaigns with targeting
 - `GET /backoffice/campaigns` - View saved campaigns
 

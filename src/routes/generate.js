@@ -66,9 +66,20 @@ router.post('/backoffice/generate', async (req, res) => {
         css: variation.css,
         text: variation.text
       })),
+      template: generateHtmlTemplate(),
       campaignObjective: campaignObjective,
       productCount: productList.length,
       category: category || 'all',
+      products: productList.map(product => ({
+        id: product.id,
+        name: product.name,
+        brand: product.brand,
+        price: product.price,
+        category: product.category,
+        description: product.description,
+        discount: product.discount || null,
+        image: product.image || null
+      })),
       generatedAt: new Date().toISOString()
     };
 
@@ -93,7 +104,8 @@ router.post('/backoffice/save-campaign', async (req, res) => {
       variation, 
       targetingCriteria,
       category,
-      notes 
+      notes,
+      products 
     } = req.body;
     
     // Validate required fields
@@ -108,13 +120,6 @@ router.post('/backoffice/save-campaign', async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Campaign objective is required'
-      });
-    }
-    
-    if (!variation || !variation.html || !variation.css || !variation.text) {
-      return res.status(400).json({
-        success: false,
-        error: 'Complete variation (html, css, text) is required'
       });
     }
     
@@ -139,6 +144,7 @@ router.post('/backoffice/save-campaign', async (req, res) => {
         behaviors: []
       },
       notes: notes || '',
+      products: products || [],
       variation: {
         widgetType: variation.widgetType || 'product_cards',
         html: variation.html,
@@ -275,7 +281,10 @@ router.post('/frontend/get-recommendation', async (req, res) => {
         html: selectedCampaign.variation.html,
         css: selectedCampaign.variation.css,
         text: selectedCampaign.variation.text,
-        widgetType: selectedCampaign.variation.widgetType
+        widgetType: selectedCampaign.variation.widgetType,
+        category: selectedCampaign.category,
+        products: selectedCampaign.products || [],
+        template: generateHtmlTemplate()
       },
       matchReason: selectedCampaign.matchReason || 'Profile match'
     });
@@ -363,6 +372,8 @@ function formatRecommendationResponse(campaign) {
     html: campaign.variation.html,
     css: campaign.variation.css,
     text: campaign.variation.text,
+    products: campaign.products || [],
+    template: generateHtmlTemplate(),
     createdAt: campaign.createdAt
   };
 }
@@ -576,51 +587,120 @@ function extractHtmlAndCss(widgetCode) {
   }
 }
 
+function generateHtmlTemplate() {
+  return `
+<div class="product-card-container">
+  <div class="product-card">
+    <div class="product-image" style="background-image: url('https://via.placeholder.com/150')"></div>
+    <div class="product-info">
+      <h2 class="product-name">{{productName}}</h2>
+      <p class="product-brand">{{brand}}</p>
+      <p class="product-description">{{description}}</p>
+      <p class="product-price">{{price}} <span class="product-discount">{{discount}} OFF</span></p>
+      <button class="cta-button">{{buttonText}}</button>
+    </div>
+  </div>
+  <!-- Repeat similar blocks for each product -->
+</div>`
+}
 // Fallback HTML generator
 function generateFallbackHtml(widgetType, productList) {
   const products = productList.slice(0, 3);
   
   return `
-<div class="product-cards-widget">
-  <h2>Recommended Products</h2>
-  <div class="products-grid">
-    ${products.map(product => `
-    <div class="product-card">
-      <h3>${product.name}</h3>
-      <p class="brand">${product.brand}</p>
-      <p class="price">$${product.price}</p>
-      ${product.discount ? `<span class="discount">${product.discount}% OFF</span>` : ''}
-      <button class="add-to-cart">Add to Cart</button>
-    </div>`).join('')}
-  </div>
+<div class="product-card-container">
+  ${products.map(product => `
+  <div class="product-card">
+    <div class="product-image" style="background-image: url('https://via.placeholder.com/150')"></div>
+    <div class="product-info">
+      <h2 class="product-name">${product.name}</h2>
+      <p class="product-brand">${product.brand}</p>
+      <p class="product-description">${product.description || 'Premium quality product'}</p>
+      <p class="product-price">$${product.price} ${product.discount ? `<span class="product-discount">${product.discount}% OFF</span>` : ''}</p>
+      <button class="cta-button">Add to Cart</button>
+    </div>
+  </div>`).join('')}
 </div>`;
 }
 
 // Fallback CSS generator  
 function generateFallbackCss(widgetType) {
   return `
-.product-cards-widget {
-  padding: 1.5rem;
-}
-.products-grid {
+.product-card-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 1.5rem;
 }
 .product-card {
   border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 1rem;
-  text-align: center;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
 }
-.add-to-cart {
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.product-image {
+  width: 100%;
+  height: 200px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.product-info {
+  padding: 1.25rem;
+}
+.product-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+.product-brand {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.product-description {
+  font-size: 0.9rem;
+  color: #777;
+  margin: 0 0 1rem 0;
+  line-height: 1.4;
+}
+.product-price {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 1.25rem 0;
+}
+.product-discount {
+  background: #e74c3c;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+.cta-button {
   background: #007bff;
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 600;
   cursor: pointer;
+  width: 100%;
+  transition: background-color 0.2s ease;
+}
+.cta-button:hover {
+  background: #0056b3;
 }`;
 }
 
