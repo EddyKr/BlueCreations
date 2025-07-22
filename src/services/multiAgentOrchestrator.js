@@ -1,0 +1,307 @@
+const { v4: uuidv4 } = require('uuid');
+const openaiService = require('./openaiService');
+
+// Import specialist agents
+const requirementsAnalyst = require('./specialists/requirementsAnalyst');
+const domainExpertA = require('./specialists/domainExpertA');
+const domainExpertB = require('./specialists/domainExpertB');
+const technicalAdvisor = require('./specialists/technicalAdvisor');
+
+class MultiAgentOrchestrator {
+  constructor() {
+    this.sessions = new Map();
+    this.specialists = {
+      requirements: requirementsAnalyst,
+      domainA: domainExpertA,
+      domainB: domainExpertB,
+      technical: technicalAdvisor
+    };
+    
+    this.orchestratorPersonality = {
+      name: "Alex",
+      role: "Project Coordinator",
+      systemPrompt: `You are Alex, an experienced project coordinator. Your role is to:
+
+1. Understand user needs through natural conversation
+2. Ask clarifying questions when information is unclear
+3. Coordinate with specialists when deeper expertise is needed
+4. Provide direct answers when you have sufficient knowledge
+
+CONTEXT MEMORY RULES - CRITICAL:
+- ALWAYS read the ENTIRE conversation history before responding
+- NEVER ask for information the user already provided
+- EXPLICITLY reference what they told you
+- BUILD UPON previous messages - don't start over each time
+
+DECISION RULES:
+- Have enough context → CONSULT_SPECIALISTS or ANSWER_DIRECTLY
+- Missing essential info → ASK_QUESTIONS
+- Simple questions → ANSWER_DIRECTLY
+
+AVAILABLE SPECIALISTS:
+- Sam (Requirements Analyst) - for clarifying needs and requirements analysis
+- Dr. Maya (Domain Expert A - Software Architecture) - for technical architecture and web development
+- Dr. Sarah (Domain Expert B - UX/UI & Product Strategy) - for user experience and product strategy
+- Tech (Technical Advisor) - for implementation guidance and technical analysis
+
+RESPONSE FORMAT:
+DECISION: [CONSULT_REQUIREMENTS | CONSULT_DOMAIN_A | CONSULT_DOMAIN_B | CONSULT_TECHNICAL | ANSWER_DIRECTLY | ASK_QUESTIONS]
+RESPONSE: [Your response to the user]`
+    };
+  }
+
+  async processUserMessage(message, sessionId = null) {
+    try {
+      // Create or get session
+      let session = this.sessions.get(sessionId);
+      if (!session) {
+        sessionId = sessionId || uuidv4();
+        this.createSession(sessionId);
+        session = this.sessions.get(sessionId);
+      }
+
+      // Add user message
+      session.messages.push({
+        type: 'user',
+        content: message,
+        timestamp: new Date()
+      });
+
+      // Get orchestrator decision
+      const orchestratorResponse = await this.consultOrchestrator(session);
+      
+      // Add orchestrator response
+      session.messages.push({
+        type: 'orchestrator',
+        agent: 'Alex',
+        content: orchestratorResponse,
+        timestamp: new Date()
+      });
+
+      return {
+        sessionId: sessionId,
+        response: orchestratorResponse,
+        currentAgent: 'Alex (Project Coordinator)',
+        timestamp: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error('Multi-agent processing error:', error);
+      throw new Error(`Multi-agent processing failed: ${error.message}`);
+    }
+  }
+
+  async consultOrchestrator(session) {
+    const conversationHistory = this.formatConversationHistory(session.messages);
+    
+    const prompt = {
+      system: this.orchestratorPersonality.systemPrompt,
+      user: `CONVERSATION HISTORY:
+${conversationHistory}
+
+Analyze the conversation and determine what to do next. Consider what information is already provided and what might be missing.
+
+Choose the most appropriate action:
+- CONSULT_REQUIREMENTS: If requirements need clarification or analysis
+- CONSULT_DOMAIN_A: For technical architecture, web development, or software engineering questions
+- CONSULT_DOMAIN_B: For UX/UI design, product strategy, or user experience questions
+- CONSULT_TECHNICAL: For implementation details, cost analysis, or technical constraints
+- ANSWER_DIRECTLY: If you have enough information to provide a complete answer
+- ASK_QUESTIONS: If critical information is missing
+
+Respond in EXACTLY this format:
+DECISION: [Your chosen action]
+RESPONSE: [Your response to the user]`
+    };
+
+    const response = await this.callOpenAI(prompt, 'Orchestrator');
+    const decision = this.parseOrchestratorDecision(response);
+    
+    if (decision.action === 'ANSWER_DIRECTLY' || decision.action === 'ASK_QUESTIONS') {
+      return decision.response;
+    } else {
+      return await this.runSpecialistWorkflow(session, decision);
+    }
+  }
+
+  parseOrchestratorDecision(orchestratorResponse) {
+    const lines = orchestratorResponse.split('\n');
+    let decision = { action: null, response: orchestratorResponse };
+    
+    for (let line of lines) {
+      if (line.startsWith('DECISION:')) {
+        decision.action = line.replace('DECISION:', '').trim();
+      } else if (line.startsWith('RESPONSE:')) {
+        decision.response = line.replace('RESPONSE:', '').trim();
+        const responseIndex = lines.indexOf(line);
+        if (responseIndex < lines.length - 1) {
+          decision.response = lines.slice(responseIndex).join('\n').replace('RESPONSE:', '').trim();
+        }
+        break;
+      }
+    }
+    
+    if (!decision.action) {
+      decision.action = 'ASK_QUESTIONS';
+    }
+    
+    return decision;
+  }
+
+  async runSpecialistWorkflow(session, initialDecision) {
+    let specialistResponses = new Map();
+    const conversationHistory = this.formatConversationHistory(session.messages);
+    
+    // Consult appropriate specialist
+    let specialistResponse = null;
+    switch (initialDecision.action) {
+      case 'CONSULT_REQUIREMENTS':
+        specialistResponse = await this.specialists.requirements.analyze(conversationHistory);
+        specialistResponses.set('REQUIREMENTS', specialistResponse.analysis);
+        break;
+      case 'CONSULT_DOMAIN_A':
+        specialistResponse = await this.specialists.domainA.provideDomainGuidance(conversationHistory);
+        specialistResponses.set('DOMAIN_A', specialistResponse.guidance);
+        break;
+      case 'CONSULT_DOMAIN_B':
+        specialistResponse = await this.specialists.domainB.analyzeUserExperience(conversationHistory);
+        specialistResponses.set('DOMAIN_B', specialistResponse.uxAnalysis);
+        break;
+      case 'CONSULT_TECHNICAL':
+        specialistResponse = await this.specialists.technical.analyzeImplementation(conversationHistory);
+        specialistResponses.set('TECHNICAL', specialistResponse.implementationAnalysis);
+        break;
+    }
+    
+    // Get final synthesis
+    return await this.getFinalSynthesis(session, specialistResponses);
+  }
+
+  async getFinalSynthesis(session, specialistResponses) {
+    const conversationHistory = this.formatConversationHistory(session.messages);
+    
+    let allSpecialistInput = '\n--- SPECIALIST INPUT ---\n';
+    for (let [specialist, response] of specialistResponses) {
+      allSpecialistInput += `${specialist}: ${response}\n\n`;
+    }
+    
+    const prompt = {
+      system: `You are Alex, an expert coordinator. Synthesize the specialist knowledge into a helpful, comprehensive response. Do not mention internal consultations - present as if you personally have this expertise. Provide actionable recommendations and clear next steps.`,
+      user: `User Request:
+${conversationHistory}
+
+Expert Knowledge:
+${allSpecialistInput}
+
+Provide a complete response that addresses the user's needs with clear recommendations and practical guidance. Structure your response logically and include specific next steps where appropriate.`
+    };
+
+    return await this.callOpenAI(prompt, 'Final Synthesis');
+  }
+
+  // New methods for direct specialist consultation
+  async consultSpecialistDirectly(specialistType, method, conversationHistory, ...args) {
+    try {
+      const specialist = this.specialists[specialistType];
+      if (!specialist) {
+        throw new Error(`Unknown specialist type: ${specialistType}`);
+      }
+      
+      if (typeof specialist[method] !== 'function') {
+        throw new Error(`Unknown method ${method} for specialist ${specialistType}`);
+      }
+      
+      return await specialist[method](conversationHistory, ...args);
+    } catch (error) {
+      console.error(`Error consulting ${specialistType} specialist:`, error);
+      throw error;
+    }
+  }
+
+  async getRequirementsAnalysis(sessionId, specificRequest = '') {
+    const session = this.getSession(sessionId);
+    if (!session) throw new Error('Session not found');
+    
+    const conversationHistory = this.formatConversationHistory(session.messages);
+    return await this.specialists.requirements.analyze(conversationHistory, specificRequest);
+  }
+
+  async getTechStackRecommendation(sessionId, projectType, constraints = {}) {
+    const session = this.getSession(sessionId);
+    if (!session) throw new Error('Session not found');
+    
+    const conversationHistory = this.formatConversationHistory(session.messages);
+    return await this.specialists.domainA.recommendTechStack(conversationHistory, projectType, constraints);
+  }
+
+  async getUXAnalysis(sessionId, targetUsers = '') {
+    const session = this.getSession(sessionId);
+    if (!session) throw new Error('Session not found');
+    
+    const conversationHistory = this.formatConversationHistory(session.messages);
+    return await this.specialists.domainB.analyzeUserExperience(conversationHistory, targetUsers);
+  }
+
+  async getCostEstimate(sessionId, projectScope, duration = '') {
+    const session = this.getSession(sessionId);
+    if (!session) throw new Error('Session not found');
+    
+    const conversationHistory = this.formatConversationHistory(session.messages);
+    return await this.specialists.technical.estimateCosts(conversationHistory, projectScope, duration);
+  }
+
+  async callOpenAI(prompt, agentName = 'System') {
+    return await openaiService.createSimpleCompletion(prompt, {
+      model: openaiService.getAvailableModels().GPT_4O,
+      maxTokens: openaiService.getTokenLimits().EXTENDED,
+      temperature: 0.7
+    });
+  }
+
+  formatConversationHistory(messages) {
+    return messages.map(msg => {
+      const timestamp = new Date(msg.timestamp).toLocaleTimeString();
+      if (msg.type === 'user') {
+        return `[${timestamp}] User: ${msg.content}`;
+      } else if (msg.agent) {
+        return `[${timestamp}] ${msg.agent}: ${msg.content}`;
+      }
+      return `[${timestamp}] System: ${msg.content}`;
+    }).join('\n');
+  }
+
+  createSession(sessionId) {
+    this.sessions.set(sessionId, {
+      id: sessionId,
+      createdAt: new Date(),
+      messages: [],
+      state: 'active'
+    });
+    return sessionId;
+  }
+
+  getSession(sessionId) {
+    return this.sessions.get(sessionId);
+  }
+
+  // Utility methods for getting specialist personalities
+  getSpecialistPersonalities() {
+    return {
+      requirements: this.specialists.requirements.getPersonality(),
+      domainA: this.specialists.domainA.getPersonality(),
+      domainB: this.specialists.domainB.getPersonality(),
+      technical: this.specialists.technical.getPersonality()
+    };
+  }
+
+  listAvailableSpecialists() {
+    const personalities = this.getSpecialistPersonalities();
+    return Object.entries(personalities).map(([key, personality]) => ({
+      id: key,
+      name: personality.name,
+      role: personality.role
+    }));
+  }
+}
+
+module.exports = new MultiAgentOrchestrator(); 
