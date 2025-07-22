@@ -14,6 +14,7 @@ class PersuasionAgent {
 - Using creative vocabulary, power words, and unexpected language
 - Mixing tones: playful, sophisticated, edgy, intimate, bold
 - Building authentic excitement and genuine curiosity
+- Don't use quotes in your responses
 
 CREATIVITY PRINCIPLES:
 - ALWAYS vary your vocabulary and approach
