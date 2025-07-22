@@ -60,19 +60,19 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"message\": \"Hi! I want to build a web application for my small business. Can you help me?\"\n}"
+          "raw": "{\n  \"message\": \"Customer Profile: Sarah, 35, busy professional mom, shops online during lunch breaks, values quick checkout and product reviews. She's browsing our premium skincare collection. Generate persuasive product messaging to encourage purchase.\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/conversation/start",
           "host": ["{{baseUrl}}"],
           "path": ["api", "conversation", "start"]
         },
-        "description": "Start a new conversation with a general business question"
+        "description": "Start conversation with customer profile for persuasive messaging (should trigger Persuasion Specialist)"
       },
       "response": []
     },
     {
-      "name": "3. Continue - Requirements Analysis Trigger",
+      "name": "3. Continue - Analytics Trigger",
       "request": {
         "method": "POST",
         "header": [
@@ -83,19 +83,19 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"message\": \"I need to understand what features I should include in my e-commerce platform. I want to sell handmade jewelry online and need to know what functionality is essential.\"\n}"
+          "raw": "{\n  \"message\": \"Customer Profile: Mike, 28, tech-savvy early adopter, compares prices across multiple sites, abandons cart frequently due to shipping costs. Current conversion rate is 2.1%. Analyze user behavior and recommend optimization strategies.\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
           "host": ["{{baseUrl}}"],
           "path": ["api", "conversation", "{{sessionId}}", "continue"]
         },
-        "description": "Continue conversation with requirements analysis question (should trigger Sam - Requirements Analyst)"
+        "description": "Analytics request for conversion optimization (should trigger Alex - Analytics Specialist)"
       },
       "response": []
     },
     {
-      "name": "4. Continue - Technical Architecture Question",
+      "name": "4. Continue - Content Generation Request",
       "request": {
         "method": "POST",
         "header": [
@@ -106,19 +106,19 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"message\": \"What technology stack would you recommend for building a scalable e-commerce website? Should I use React or Vue.js for the frontend? What about the backend - Node.js or Python?\"\n}"
+          "raw": "{\n  \"message\": \"Customer Profile: Lisa, 45, luxury buyer, influenced by social proof and exclusivity, mobile shopper. Product: Premium leather handbag, $299. Generate compelling product description and email marketing copy that emphasizes craftsmanship and limited availability.\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",
           "host": ["{{baseUrl}}"],
           "path": ["api", "conversation", "{{sessionId}}", "continue"]
         },
-        "description": "Technical architecture question (should trigger Dr. Maya - Domain Expert A)"
+        "description": "Content generation request for luxury product (should trigger Sam - Content Generation Specialist)"
       },
       "response": []
     },
     {
-      "name": "5. Continue - UX/Product Strategy Question",
+      "name": "5. Continue - UI/UX Design Optimization",
       "request": {
         "method": "POST",
         "header": [
@@ -129,7 +129,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"message\": \"How should I design the user experience for my jewelry website? What's the best way to showcase products and make the checkout process smooth for customers who might not be tech-savvy?\"\n}"
+          "raw": "{\n  \"message\": \"Customer Profile: David, 62, less tech-savvy, prefers simple interfaces, shops for gifts for family. Current checkout abandonment rate is 68%. Optimize the checkout flow design and create trust-building elements for older demographics.\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/conversation/{{sessionId}}/continue",

@@ -2,19 +2,21 @@ const { v4: uuidv4 } = require('uuid');
 const openaiService = require('./openaiService');
 
 // Import specialist agents
-const requirementsAnalyst = require('./specialists/requirementsAnalyst');
-const domainExpertA = require('./specialists/domainExpertA');
-const domainExpertB = require('./specialists/domainExpertB');
-const technicalAdvisor = require('./specialists/technicalAdvisor');
+const analyticsAgent = require('./specialists/analyticsAgent');
+const persuasionAgent = require('./specialists/persuasionAgent');
+const textGenerationAgent = require('./specialists/textGenerationAgent');
+const htmlCssAgent = require('./specialists/htmlCssAgent');
+const ethicsAgent = require('./specialists/ethicsAgent');
 
 class MultiAgentOrchestrator {
   constructor() {
     this.sessions = new Map();
     this.specialists = {
-      requirements: requirementsAnalyst,
-      domainA: domainExpertA,
-      domainB: domainExpertB,
-      technical: technicalAdvisor
+      analytics: analyticsAgent,
+      persuasion: persuasionAgent,
+      textGeneration: textGenerationAgent,
+      htmlCss: htmlCssAgent,
+      ethics: ethicsAgent
     };
     
     this.orchestratorPersonality = {
@@ -37,12 +39,14 @@ DECISION RULES:
 - Have enough context → CONSULT_SPECIALISTS or ANSWER_DIRECTLY
 - Missing essential info → ASK_QUESTIONS
 - Simple questions → ANSWER_DIRECTLY
+- Focus on conversion optimization and ethical selling
 
 AVAILABLE SPECIALISTS:
-- Sam (Requirements Analyst) - for clarifying needs and requirements analysis
-- Dr. Maya (Domain Expert A - Software Architecture) - for technical architecture and web development
-- Dr. Sarah (Domain Expert B - UX/Ugit push -u origin mainI & Product Strategy) - for user experience and product strategy
-- Tech (Technical Advisor) - for implementation guidance and technical analysis
+- Alex (Analytics Specialist) - for analyzing user behavior, conversion funnels, and performance optimization
+- Maya (Persuasion Specialist) - for creating compelling messaging and addressing customer objections
+- Sam (Content Generation Specialist) - for creating product descriptions and marketing copy
+- Jordan (UI/UX Conversion Specialist) - for optimizing page layouts and checkout flows
+- Dr. Riley (Ethics & Compliance Specialist) - for ensuring ethical marketing practices and compliance
 
 RESPONSE FORMAT:
 DECISION: [CONSULT_REQUIREMENTS | CONSULT_DOMAIN_A | CONSULT_DOMAIN_B | CONSULT_TECHNICAL | ANSWER_DIRECTLY | ASK_QUESTIONS]
@@ -102,12 +106,12 @@ ${conversationHistory}
 Analyze the conversation and determine what to do next. Consider what information is already provided and what might be missing.
 
 Choose the most appropriate action:
-- CONSULT_REQUIREMENTS: If requirements need clarification or analysis
-- CONSULT_DOMAIN_A: For technical architecture, web development, or software engineering questions
-- CONSULT_DOMAIN_B: For UX/UI design, product strategy, or user experience questions
-- CONSULT_TECHNICAL: For implementation details, cost analysis, or technical constraints
+- CONSULT_ANALYTICS: For analyzing user behavior, conversion metrics, and optimization opportunities
+- CONSULT_PERSUASION: For creating compelling messaging, handling objections, and conversion psychology
+- CONSULT_CONTENT: For generating product descriptions, marketing copy, and persuasive content
+- CONSULT_DESIGN: For optimizing page layouts, checkout flows, and UI/UX for conversions
+- CONSULT_ETHICS: For reviewing marketing practices for ethical compliance and transparency
 - ANSWER_DIRECTLY: If you have enough information to provide a complete answer
-- ASK_QUESTIONS: If critical information is missing
 
 Respond in EXACTLY this format:
 DECISION: [Your chosen action]
@@ -155,21 +159,25 @@ RESPONSE: [Your response to the user]`
     // Consult appropriate specialist
     let specialistResponse = null;
     switch (initialDecision.action) {
-      case 'CONSULT_REQUIREMENTS':
-        specialistResponse = await this.specialists.requirements.analyze(conversationHistory);
-        specialistResponses.set('REQUIREMENTS', specialistResponse.analysis);
+      case 'CONSULT_ANALYTICS':
+        specialistResponse = await this.specialists.analytics.analyzeConversion(conversationHistory);
+        specialistResponses.set('ANALYTICS', specialistResponse.analysis);
         break;
-      case 'CONSULT_DOMAIN_A':
-        specialistResponse = await this.specialists.domainA.provideDomainGuidance(conversationHistory);
-        specialistResponses.set('DOMAIN_A', specialistResponse.guidance);
+      case 'CONSULT_PERSUASION':
+        specialistResponse = await this.specialists.persuasion.createPersuasiveContent(conversationHistory);
+        specialistResponses.set('PERSUASION', specialistResponse.content);
         break;
-      case 'CONSULT_DOMAIN_B':
-        specialistResponse = await this.specialists.domainB.analyzeUserExperience(conversationHistory);
-        specialistResponses.set('DOMAIN_B', specialistResponse.uxAnalysis);
+      case 'CONSULT_CONTENT':
+        specialistResponse = await this.specialists.textGeneration.generateProductContent(conversationHistory);
+        specialistResponses.set('CONTENT', specialistResponse.content);
         break;
-      case 'CONSULT_TECHNICAL':
-        specialistResponse = await this.specialists.technical.analyzeImplementation(conversationHistory);
-        specialistResponses.set('TECHNICAL', specialistResponse.implementationAnalysis);
+      case 'CONSULT_DESIGN':
+        specialistResponse = await this.specialists.htmlCss.optimizePageLayout(conversationHistory, 'product_page');
+        specialistResponses.set('DESIGN', specialistResponse.optimization);
+        break;
+      case 'CONSULT_ETHICS':
+        specialistResponse = await this.specialists.ethics.reviewMarketingEthics(conversationHistory);
+        specialistResponses.set('ETHICS', specialistResponse.review);
         break;
     }
     
