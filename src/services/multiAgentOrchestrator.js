@@ -23,6 +23,46 @@ class MultiAgentOrchestrator {
     this.recommendationCache = new Map(); // key: requestHash, value: recommendations array
     this.cacheMaxAge = 5 * 60 * 1000; // 5 minutes
     
+    // Storage for saved recommendations
+    this.savedRecommendations = new Map(); // key: id, value: recommendation data
+    this.nextRecommendationId = 1;
+    
+    // === NEW: Back Office Campaign Management ===
+    this.campaigns = new Map(); // key: campaignId, value: campaign data
+    this.nextCampaignId = 1;
+    
+    // === NEW: Front-end Recommendation Selection Agent ===
+    this.selectionAgent = {
+      name: "Quinn",
+      role: "Recommendation Selection Agent",
+      systemPrompt: `You are Quinn, an intelligent recommendation selection agent for front-end users.
+
+Your role is to:
+1. Analyze user profile properties and segments
+2. Find the best matching saved recommendation campaigns
+3. Select the most relevant recommendation based on targeting criteria
+4. Ensure recommendations are appropriate and personalized
+
+SELECTION CRITERIA (in order of priority):
+1. Campaign status (active vs inactive)
+2. Target segment match (exact match preferred)
+3. Profile property alignment (sport_interests, budget_range, skill_level, etc.)
+4. Campaign performance metrics (if available)
+5. Recommendation freshness and relevance
+
+TARGETING PROPERTIES TO CONSIDER:
+- sport_interests: Primary targeting criteria
+- budget_range: budget, moderate, premium, luxury
+- skill_level: recreational, intermediate, advanced, professional  
+- preferred_brands: Brand preference alignment
+- segments: User segment membership
+- domaingroup: TECH_PROFESSIONAL, SMALL_BUSINESS, STUDENT, EXECUTIVE
+- location: Geographic targeting
+- age: Age-based recommendations
+
+OUTPUT: Return the best matching recommendation with justification for the selection.`
+    };
+
     this.orchestratorPersonality = {
       name: "Alex",
       role: "Project Coordinator",
@@ -82,6 +122,10 @@ RESPONSE STYLE:
 - Ensure smooth, natural communication
 - Maintain helpful and professional tone`
     };
+
+    // Storage for saved recommendations
+    this.savedRecommendations = new Map(); // key: id, value: recommendation data
+    this.nextRecommendationId = 1;
   }
 
   // Load user profiles from personas.json
@@ -545,6 +589,1155 @@ Select the BEST recommendation for this user and message. Return ONLY the conten
       // Fallback to highest scored recommendation
       const bestRec = recommendations.sort((a, b) => b.score - a.score)[0];
       return bestRec?.content || 'I apologize, but I encountered an issue processing your request. Please try again.';
+    }
+  }
+
+  // ===== NEW METHODS FOR ORCHESTRATOR RECOMMENDATIONS ENDPOINT =====
+
+  // Generate exactly 3 recommendations for the new endpoint
+  async generateThreeRecommendations(userInput) {
+    try {
+      const { message, profileId } = userInput;
+      const userProfile = this.getUserProfile(profileId);
+      
+      // Generate recommendations using existing background method
+      let recommendations = await this.generateBackgroundRecommendations(message, userProfile);
+      
+      // Ensure we have exactly 3 recommendations
+      if (recommendations.length > 3) {
+        // Sort by score and take top 3
+        recommendations = recommendations
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3);
+      } else if (recommendations.length < 3) {
+        // Generate additional fallback recommendations to reach 3
+        const additionalRecs = await this.generateFallbackRecommendations(message, userProfile);
+        recommendations = [...recommendations, ...additionalRecs].slice(0, 3);
+      }
+      
+      // Add unique IDs and ensure exactly 3 items
+      return recommendations.map((rec, index) => ({
+        id: `rec_${Date.now()}_${index}`,
+        ...rec,
+        generatedAt: new Date().toISOString(),
+        originalMessage: message,
+        profileId: profileId || null
+      })).slice(0, 3);
+      
+    } catch (error) {
+      console.error('Error generating three recommendations:', error);
+      throw new Error(`Failed to generate recommendations: ${error.message}`);
+    }
+  }
+
+  // Save recommendations to the saved recommendations array
+  saveRecommendationsToArray(recommendationData) {
+    try {
+      const id = `saved_${this.nextRecommendationId++}`;
+      const savedData = {
+        id: id,
+        ...recommendationData,
+        savedAt: new Date().toISOString()
+      };
+      
+      this.savedRecommendations.set(id, savedData);
+      
+      return {
+        success: true,
+        id: id,
+        timestamp: savedData.savedAt,
+        message: 'Recommendations saved successfully'
+      };
+    } catch (error) {
+      console.error('Error saving recommendations:', error);
+      return {
+        success: false,
+        message: 'Failed to save recommendations',
+        error: error.message
+      };
+    }
+  }
+
+  // Get saved recommendations with filtering
+  getSavedRecommendations(filters = {}) {
+    try {
+      const { limit = 10, profileId = null, searchTerm = null } = filters;
+      
+      let items = Array.from(this.savedRecommendations.values());
+      
+      // Filter by profileId if specified
+      if (profileId) {
+        items = items.filter(item => item.profileId === profileId);
+      }
+      
+      // Filter by search term in message or recommendation content
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        items = items.filter(item => 
+          item.message.toLowerCase().includes(searchLower) ||
+          item.recommendations.some(rec => 
+            rec.title.toLowerCase().includes(searchLower) ||
+            rec.content.toLowerCase().includes(searchLower)
+          )
+        );
+      }
+      
+      // Sort by savedAt timestamp (newest first)
+      items.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+      
+      // Apply limit
+      const limitedItems = items.slice(0, limit);
+      
+      return {
+        items: limitedItems,
+        total: items.length,
+        filtered: limitedItems.length,
+        hasMore: items.length > limit
+      };
+    } catch (error) {
+      console.error('Error retrieving saved recommendations:', error);
+      return {
+        items: [],
+        total: 0,
+        filtered: 0,
+        hasMore: false,
+        error: error.message
+      };
+    }
+  }
+
+  // Delete a specific saved recommendation
+  deleteSavedRecommendation(recommendationId) {
+    try {
+      if (!this.savedRecommendations.has(recommendationId)) {
+        return {
+          success: false,
+          message: 'Recommendation not found'
+        };
+      }
+      
+      this.savedRecommendations.delete(recommendationId);
+      
+      return {
+        success: true,
+        message: 'Recommendation deleted successfully',
+        deletedId: recommendationId
+      };
+    } catch (error) {
+      console.error('Error deleting saved recommendation:', error);
+      return {
+        success: false,
+        message: 'Failed to delete recommendation',
+        error: error.message
+      };
+    }
+  }
+
+  // Clear all saved recommendations
+  clearSavedRecommendations() {
+    try {
+      const count = this.savedRecommendations.size;
+      this.savedRecommendations.clear();
+      this.nextRecommendationId = 1;
+      
+      return {
+        success: true,
+        message: `Cleared ${count} saved recommendations`,
+        clearedCount: count
+      };
+    } catch (error) {
+      console.error('Error clearing saved recommendations:', error);
+      return {
+        success: false,
+        message: 'Failed to clear saved recommendations',
+        error: error.message
+      };
+    }
+  }
+
+  // Get statistics about saved recommendations
+  getSavedRecommendationsStats() {
+    try {
+      const items = Array.from(this.savedRecommendations.values());
+      
+      return {
+        totalSaved: items.length,
+        byProfileId: this.groupByField(items, 'profileId'),
+        byApproach: this.groupByApproaches(items),
+        oldestSaved: items.length > 0 ? Math.min(...items.map(i => new Date(i.savedAt))) : null,
+        newestSaved: items.length > 0 ? Math.max(...items.map(i => new Date(i.savedAt))) : null
+      };
+    } catch (error) {
+      console.error('Error getting saved recommendations stats:', error);
+      return {
+        totalSaved: 0,
+        error: error.message
+      };
+    }
+  }
+
+  // Helper method to group items by field
+  groupByField(items, field) {
+    const groups = {};
+    items.forEach(item => {
+      const value = item[field] || 'null';
+      groups[value] = (groups[value] || 0) + 1;
+    });
+    return groups;
+  }
+
+  // Helper method to group by recommendation approaches
+  groupByApproaches(items) {
+    const approaches = {};
+    items.forEach(item => {
+      if (item.recommendations) {
+        item.recommendations.forEach(rec => {
+          const approach = rec.approach || 'UNKNOWN';
+          approaches[approach] = (approaches[approach] || 0) + 1;
+        });
+      }
+    });
+    return approaches;
+  }
+
+  // ===== BACK OFFICE CAMPAIGN MANAGEMENT =====
+
+  // Create a new recommendation campaign for marketers
+  async createCampaign(campaignData) {
+    try {
+      const campaignId = `campaign_${this.nextCampaignId++}`;
+      
+      const campaign = {
+        id: campaignId,
+        name: campaignData.name || `Campaign ${campaignId}`,
+        description: campaignData.description || '',
+        status: campaignData.status || 'draft', // draft, active, paused, completed
+        createdBy: campaignData.createdBy || 'unknown',
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        
+        // Targeting criteria
+        targeting: {
+          segments: campaignData.targeting?.segments || [], // Array of segment IDs
+          sportInterests: campaignData.targeting?.sportInterests || [], // Array of sports
+          budgetRanges: campaignData.targeting?.budgetRanges || [], // Array of budget levels
+          skillLevels: campaignData.targeting?.skillLevels || [], // Array of skill levels
+          domainGroups: campaignData.targeting?.domainGroups || [], // Array of domain groups
+          ageRanges: campaignData.targeting?.ageRanges || [], // Array like ["18-25", "26-35"]
+          locations: campaignData.targeting?.locations || [], // Array of locations
+          preferredBrands: campaignData.targeting?.preferredBrands || [] // Array of brands
+        },
+        
+        // Campaign settings
+        priority: campaignData.priority || 5, // 1-10, higher is more important
+        startDate: campaignData.startDate || null,
+        endDate: campaignData.endDate || null,
+        
+        // Recommendations associated with this campaign
+        recommendations: campaignData.recommendations || [],
+        
+        // Performance tracking
+        metrics: {
+          impressions: 0,
+          clicks: 0,
+          conversions: 0,
+          ctr: 0,
+          conversionRate: 0
+        }
+      };
+      
+      this.campaigns.set(campaignId, campaign);
+      
+      return {
+        success: true,
+        campaignId: campaignId,
+        campaign: campaign,
+        message: 'Campaign created successfully'
+      };
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+      return {
+        success: false,
+        message: 'Failed to create campaign',
+        error: error.message
+      };
+    }
+  }
+
+  // Update an existing campaign
+  updateCampaign(campaignId, updates) {
+    try {
+      if (!this.campaigns.has(campaignId)) {
+        return {
+          success: false,
+          message: 'Campaign not found'
+        };
+      }
+      
+      const campaign = this.campaigns.get(campaignId);
+      const updatedCampaign = {
+        ...campaign,
+        ...updates,
+        lastModified: new Date().toISOString(),
+        // Preserve immutable fields
+        id: campaign.id,
+        createdAt: campaign.createdAt,
+        createdBy: campaign.createdBy
+      };
+      
+      this.campaigns.set(campaignId, updatedCampaign);
+      
+      return {
+        success: true,
+        campaign: updatedCampaign,
+        message: 'Campaign updated successfully'
+      };
+    } catch (error) {
+      console.error('Error updating campaign:', error);
+      return {
+        success: false,
+        message: 'Failed to update campaign',
+        error: error.message
+      };
+    }
+  }
+
+  // Get campaigns with filtering options
+  getCampaigns(filters = {}) {
+    try {
+      const { status, createdBy, limit = 20, offset = 0 } = filters;
+      
+      let campaigns = Array.from(this.campaigns.values());
+      
+      // Apply filters
+      if (status) {
+        campaigns = campaigns.filter(c => c.status === status);
+      }
+      if (createdBy) {
+        campaigns = campaigns.filter(c => c.createdBy === createdBy);
+      }
+      
+      // Sort by last modified (newest first)
+      campaigns.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
+      
+      // Apply pagination
+      const total = campaigns.length;
+      const paginatedCampaigns = campaigns.slice(offset, offset + limit);
+      
+      return {
+        success: true,
+        campaigns: paginatedCampaigns,
+        total: total,
+        page: Math.floor(offset / limit) + 1,
+        totalPages: Math.ceil(total / limit),
+        hasMore: offset + limit < total
+      };
+    } catch (error) {
+      console.error('Error retrieving campaigns:', error);
+      return {
+        success: false,
+        campaigns: [],
+        total: 0,
+        error: error.message
+      };
+    }
+  }
+
+  // Delete a campaign
+  deleteCampaign(campaignId) {
+    try {
+      if (!this.campaigns.has(campaignId)) {
+        return {
+          success: false,
+          message: 'Campaign not found'
+        };
+      }
+      
+      this.campaigns.delete(campaignId);
+      
+      return {
+        success: true,
+        message: 'Campaign deleted successfully',
+        deletedId: campaignId
+      };
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+      return {
+        success: false,
+        message: 'Failed to delete campaign',
+        error: error.message
+      };
+    }
+  }
+
+  // ===== FRONT-END RECOMMENDATION SELECTION =====
+
+  // Main method: Select best recommendation for a front-end user
+  async selectRecommendationForUser(profileId, context = {}) {
+    try {
+      const userProfile = this.getUserProfile(profileId);
+      if (!userProfile) {
+        return {
+          success: false,
+          message: 'User profile not found',
+          recommendation: null
+        };
+      }
+      
+      // Get active campaigns that match user profile
+      const matchingCampaigns = this.findMatchingCampaigns(userProfile);
+      
+      if (matchingCampaigns.length === 0) {
+        return {
+          success: true,
+          message: 'No matching campaigns found',
+          recommendation: this.getFallbackRecommendation(userProfile),
+          fallback: true
+        };
+      }
+      
+      // Score and rank campaigns based on user profile match
+      const scoredCampaigns = this.scoreCampaignsForUser(matchingCampaigns, userProfile);
+      
+      // Select the best campaign and recommendation
+      const selectedCampaign = scoredCampaigns[0];
+      const selectedRecommendation = this.selectBestRecommendationFromCampaign(selectedCampaign, userProfile);
+      
+      // Track impression
+      this.trackCampaignImpression(selectedCampaign.id);
+      
+      return {
+        success: true,
+        recommendation: selectedRecommendation,
+        campaignId: selectedCampaign.id,
+        campaignName: selectedCampaign.name,
+        score: selectedCampaign.score,
+        justification: selectedCampaign.justification,
+        userProfile: {
+          id: userProfile.id,
+          segments: userProfile.segments
+        }
+      };
+    } catch (error) {
+      console.error('Error selecting recommendation for user:', error);
+      return {
+        success: false,
+        message: 'Failed to select recommendation',
+        error: error.message,
+        recommendation: null
+      };
+    }
+  }
+
+  // Find campaigns that match user profile criteria
+  findMatchingCampaigns(userProfile) {
+    const activeCampaigns = Array.from(this.campaigns.values())
+      .filter(campaign => {
+        // Check if campaign is active
+        if (campaign.status !== 'active') return false;
+        
+        // Check date ranges
+        const now = new Date();
+        if (campaign.startDate && new Date(campaign.startDate) > now) return false;
+        if (campaign.endDate && new Date(campaign.endDate) < now) return false;
+        
+        // Check if campaign has recommendations
+        if (!campaign.recommendations || campaign.recommendations.length === 0) return false;
+        
+        return true;
+      });
+    
+    // Filter campaigns that match user targeting criteria
+    return activeCampaigns.filter(campaign => 
+      this.doesCampaignMatchUser(campaign, userProfile)
+    );
+  }
+
+  // Check if a campaign matches a user profile
+  doesCampaignMatchUser(campaign, userProfile) {
+    const targeting = campaign.targeting;
+    
+    // If no targeting criteria set, campaign matches everyone
+    if (!targeting || this.isEmptyTargeting(targeting)) {
+      return true;
+    }
+    
+    // Check segment match (high priority)
+    if (targeting.segments && targeting.segments.length > 0) {
+      const userSegments = userProfile.segments?.map(s => s.id) || [];
+      const hasSegmentMatch = targeting.segments.some(segment => 
+        userSegments.includes(segment)
+      );
+      if (!hasSegmentMatch) return false;
+    }
+    
+    // Check sport interests
+    if (targeting.sportInterests && targeting.sportInterests.length > 0) {
+      const userSports = this.getPropertyValues(userProfile, 'sport_interests');
+      const hasSportMatch = targeting.sportInterests.some(sport => 
+        userSports.includes(sport)
+      );
+      if (!hasSportMatch) return false;
+    }
+    
+    // Check budget range
+    if (targeting.budgetRanges && targeting.budgetRanges.length > 0) {
+      const userBudget = this.getPropertyValues(userProfile, 'budget_range')[0];
+      if (userBudget && !targeting.budgetRanges.includes(userBudget)) return false;
+    }
+    
+    // Check skill level
+    if (targeting.skillLevels && targeting.skillLevels.length > 0) {
+      const userSkill = this.getPropertyValues(userProfile, 'skill_level')[0];
+      if (userSkill && !targeting.skillLevels.includes(userSkill)) return false;
+    }
+    
+    // Check domain group
+    if (targeting.domainGroups && targeting.domainGroups.length > 0) {
+      const userDomain = this.getPropertyValues(userProfile, 'domaingroup')[0];
+      if (userDomain && !targeting.domainGroups.includes(userDomain)) return false;
+    }
+    
+    return true;
+  }
+
+  // Check if targeting criteria is empty
+  isEmptyTargeting(targeting) {
+    return Object.values(targeting).every(criteria => 
+      !criteria || (Array.isArray(criteria) && criteria.length === 0)
+    );
+  }
+
+  // Score campaigns based on how well they match the user
+  scoreCampaignsForUser(campaigns, userProfile) {
+    return campaigns.map(campaign => {
+      let score = 0;
+      let justification = [];
+      
+      // Base score from campaign priority
+      score += campaign.priority;
+      justification.push(`Priority: ${campaign.priority}`);
+      
+      // Bonus for segment match
+      if (campaign.targeting.segments && campaign.targeting.segments.length > 0) {
+        const userSegments = userProfile.segments?.map(s => s.id) || [];
+        const matchingSegments = campaign.targeting.segments.filter(segment => 
+          userSegments.includes(segment)
+        );
+        score += matchingSegments.length * 10;
+        if (matchingSegments.length > 0) {
+          justification.push(`Segment match: ${matchingSegments.join(', ')}`);
+        }
+      }
+      
+      // Bonus for sport interest match
+      if (campaign.targeting.sportInterests && campaign.targeting.sportInterests.length > 0) {
+        const userSports = this.getPropertyValues(userProfile, 'sport_interests');
+        const matchingSports = campaign.targeting.sportInterests.filter(sport => 
+          userSports.includes(sport)
+        );
+        score += matchingSports.length * 8;
+        if (matchingSports.length > 0) {
+          justification.push(`Sport match: ${matchingSports.join(', ')}`);
+        }
+      }
+      
+      // Bonus for budget alignment
+      if (campaign.targeting.budgetRanges && campaign.targeting.budgetRanges.length > 0) {
+        const userBudget = this.getPropertyValues(userProfile, 'budget_range')[0];
+        if (userBudget && campaign.targeting.budgetRanges.includes(userBudget)) {
+          score += 5;
+          justification.push(`Budget match: ${userBudget}`);
+        }
+      }
+      
+      // Performance bonus (CTR)
+      if (campaign.metrics.impressions > 50) {
+        const ctr = campaign.metrics.ctr || 0;
+        score += ctr * 10; // Higher CTR campaigns get preference
+        justification.push(`Performance bonus: ${(ctr * 100).toFixed(1)}% CTR`);
+      }
+      
+      return {
+        ...campaign,
+        score: score,
+        justification: justification.join('; ')
+      };
+    }).sort((a, b) => b.score - a.score);
+  }
+
+  // Select best recommendation from a campaign
+  selectBestRecommendationFromCampaign(campaign, userProfile) {
+    if (!campaign.recommendations || campaign.recommendations.length === 0) {
+      return null;
+    }
+    
+    // For now, select the first recommendation
+    // In the future, this could be enhanced with A/B testing logic
+    const selectedRec = campaign.recommendations[0];
+    
+    // Personalize the recommendation content if it contains product recommendations
+    if (selectedRec.approach === 'PRODUCTS') {
+      const productRecs = this.getProductRecommendations(userProfile, 3);
+      const formattedProducts = this.formatProductRecommendations(productRecs, userProfile);
+      selectedRec.content = selectedRec.content + formattedProducts;
+    }
+    
+    return selectedRec;
+  }
+
+  // Get fallback recommendation when no campaigns match
+  getFallbackRecommendation(userProfile) {
+    const sportInterests = this.getPropertyValues(userProfile, 'sport_interests');
+    const userName = this.getPropertyValues(userProfile, 'name')[0] || 'there';
+    
+    return {
+      approach: 'PRODUCTS',
+      title: 'Personalized Recommendations',
+      content: `Hi ${userName}! Based on your interest in ${sportInterests.join(' and ')}, here are some recommendations for you:`,
+      score: 5,
+      fallback: true
+    };
+  }
+
+  // Track campaign impression
+  trackCampaignImpression(campaignId) {
+    if (this.campaigns.has(campaignId)) {
+      const campaign = this.campaigns.get(campaignId);
+      campaign.metrics.impressions += 1;
+      
+      // Update CTR
+      if (campaign.metrics.impressions > 0) {
+        campaign.metrics.ctr = campaign.metrics.clicks / campaign.metrics.impressions;
+      }
+      
+      this.campaigns.set(campaignId, campaign);
+    }
+  }
+
+  // Track campaign click
+  trackCampaignClick(campaignId) {
+    if (this.campaigns.has(campaignId)) {
+      const campaign = this.campaigns.get(campaignId);
+      campaign.metrics.clicks += 1;
+      
+      // Update CTR
+      if (campaign.metrics.impressions > 0) {
+        campaign.metrics.ctr = campaign.metrics.clicks / campaign.metrics.impressions;
+      }
+      
+      this.campaigns.set(campaignId, campaign);
+      
+      return {
+        success: true,
+        message: 'Click tracked successfully'
+      };
+    }
+    
+    return {
+      success: false,
+      message: 'Campaign not found'
+    };
+  }
+
+  // ===== MULTI-AGENT WIDGET GENERATION WORKFLOW =====
+
+  // Storage for generated widgets with full specialist workflow
+  widgetRecommendations = new Map(); // key: widgetId, value: complete widget data
+  nextWidgetId = 1;
+
+  // Main workflow: Text Generation → Ethics Review → HTML/CSS Generation → Storage
+  async generateComprehensiveWidget(campaignObjective, productList, additionalPrompt = '', widgetType = 'product_cards') {
+    try {
+      const widgetId = `widget_${this.nextWidgetId++}`;
+      const startTime = new Date().toISOString();
+      
+      console.log(`Starting comprehensive widget generation: ${widgetId}`);
+      
+      // STEP 1: Text Generation Agent - Create compelling copy
+      console.log('Step 1: Generating compelling copy...');
+      const textGeneration = await this.generateWidgetCopyWithTextAgent(campaignObjective, productList, additionalPrompt);
+      
+      if (!textGeneration.success) {
+        throw new Error(`Text generation failed: ${textGeneration.error}`);
+      }
+
+      // STEP 2: Ethics Agent - Review the generated content
+      console.log('Step 2: Ethics review...');
+      const ethicsReview = await this.reviewWidgetContentWithEthicsAgent(textGeneration.content, campaignObjective);
+      
+      if (!ethicsReview.success) {
+        throw new Error(`Ethics review failed: ${ethicsReview.error}`);
+      }
+
+      // Check if content is approved by ethics agent
+      if (!ethicsReview.approved) {
+        return {
+          success: false,
+          widgetId: widgetId,
+          error: 'Content rejected by ethics review',
+          ethicsReason: ethicsReview.reason,
+          suggestedImprovements: ethicsReview.suggestions,
+          timestamp: new Date().toISOString()
+        };
+      }
+
+      // STEP 3: HTML/CSS Agent - Generate the final widget
+      console.log('Step 3: Generating HTML/CSS widget...');
+      const htmlGeneration = await this.generateFinalWidgetWithHtmlAgent(
+        ethicsReview.approvedContent || textGeneration.content,
+        productList,
+        widgetType,
+        campaignObjective
+      );
+
+      if (!htmlGeneration.success) {
+        throw new Error(`HTML generation failed: ${htmlGeneration.error}`);
+      }
+
+      // STEP 4: Persuasion Agent - Add compelling elements
+      console.log('Step 4: Adding persuasive elements...');
+      const persuasionEnhancement = await this.enhanceWidgetWithPersuasionAgent(
+        campaignObjective,
+        productList,
+        textGeneration.content
+      );
+
+      // STEP 5: Compile and store complete widget data
+      const completeWidget = {
+        id: widgetId,
+        campaignObjective: campaignObjective,
+        productList: productList,
+        additionalPrompt: additionalPrompt,
+        widgetType: widgetType,
+        
+        // Specialist outputs
+        textGeneration: {
+          agent: textGeneration.agent,
+          content: textGeneration.content,
+          approach: textGeneration.approach,
+          timestamp: textGeneration.timestamp
+        },
+        ethicsReview: {
+          agent: ethicsReview.agent,
+          approved: ethicsReview.approved,
+          reason: ethicsReview.reason,
+          suggestions: ethicsReview.suggestions || [],
+          approvedContent: ethicsReview.approvedContent,
+          timestamp: ethicsReview.timestamp
+        },
+        persuasionEnhancement: {
+          agent: persuasionEnhancement.agent,
+          enhancements: persuasionEnhancement.enhancements,
+          persuasionTactics: persuasionEnhancement.tactics,
+          timestamp: persuasionEnhancement.timestamp
+        },
+        htmlGeneration: {
+          agent: htmlGeneration.agent,
+          widgetCode: htmlGeneration.widgetCode,
+          widgetType: htmlGeneration.widgetType,
+          timestamp: htmlGeneration.timestamp
+        },
+        
+        // Metadata
+        generatedAt: startTime,
+        completedAt: new Date().toISOString(),
+        productCount: productList.length,
+        status: 'completed'
+      };
+
+      // Store the complete widget
+      this.widgetRecommendations.set(widgetId, completeWidget);
+
+      console.log(`Widget generation completed: ${widgetId}`);
+
+      return {
+        success: true,
+        widgetId: widgetId,
+        widget: completeWidget,
+        summary: {
+          textGenerated: !!textGeneration.success,
+          ethicsApproved: ethicsReview.approved,
+          htmlGenerated: !!htmlGeneration.success,
+          persuasionEnhanced: !!persuasionEnhancement.success,
+          finalWidgetCode: htmlGeneration.widgetCode
+        }
+      };
+
+    } catch (error) {
+      console.error('Comprehensive widget generation error:', error);
+      return {
+        success: false,
+        error: error.message,
+        widgetId: widgetId || null,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  // STEP 1: Text Generation Agent
+  async generateWidgetCopyWithTextAgent(campaignObjective, productList, additionalPrompt) {
+    try {
+      const productSummary = productList.map(p => `${p.name} by ${p.brand} - $${p.price}${p.discount ? ` (${p.discount}% off)` : ''}`).join('\n');
+      
+      const contextForTextAgent = `
+CAMPAIGN OBJECTIVE: ${campaignObjective}
+
+PRODUCTS TO PROMOTE:
+${productSummary}
+
+ADDITIONAL REQUIREMENTS: ${additionalPrompt}
+
+Generate compelling marketing copy for a product recommendation widget that will be embedded on a website.`;
+
+      const textResult = await this.specialists.textGeneration.generateProductContent(contextForTextAgent, productSummary);
+
+      return {
+        success: true,
+        agent: textResult.agent,
+        content: textResult.content,
+        approach: textResult.analysisType,
+        timestamp: textResult.timestamp
+      };
+
+    } catch (error) {
+      console.error('Text generation step error:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // STEP 2: Ethics Agent Review
+  async reviewWidgetContentWithEthicsAgent(textContent, campaignObjective) {
+    try {
+      const contextForEthics = `
+CAMPAIGN OBJECTIVE: ${campaignObjective}
+
+GENERATED MARKETING CONTENT:
+${textContent}
+
+Please review this marketing content for ethics and appropriateness before it's shown to users on a website widget.`;
+
+      const ethicsResult = await this.specialists.ethics.reviewMarketingEthics(contextForEthics, textContent);
+
+      // Parse ethics agent response to determine approval
+      const ethicsAnalysis = this.parseEthicsResponse(ethicsResult.review);
+
+      return {
+        success: true,
+        agent: ethicsResult.agent,
+        approved: ethicsAnalysis.approved,
+        reason: ethicsAnalysis.reason,
+        suggestions: ethicsAnalysis.suggestions,
+        approvedContent: ethicsAnalysis.approvedContent || textContent,
+        fullReview: ethicsResult.review,
+        timestamp: ethicsResult.timestamp
+      };
+
+    } catch (error) {
+      console.error('Ethics review step error:', error);
+      return {
+        success: false,
+        error: error.message,
+        approved: false
+      };
+    }
+  }
+
+  // STEP 3: HTML/CSS Agent
+  async generateFinalWidgetWithHtmlAgent(approvedContent, productList, widgetType, campaignObjective) {
+    try {
+      const htmlResult = await this.specialists.htmlCss.generateRecommendationWidget(
+        campaignObjective,
+        productList,
+        `Use this approved marketing copy: ${approvedContent}`,
+        widgetType
+      );
+
+      return {
+        success: true,
+        agent: htmlResult.agent,
+        widgetCode: htmlResult.widgetCode,
+        widgetType: htmlResult.widgetType,
+        timestamp: htmlResult.timestamp
+      };
+
+    } catch (error) {
+      console.error('HTML generation step error:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // STEP 4: Persuasion Agent Enhancement
+  async enhanceWidgetWithPersuasionAgent(campaignObjective, productList, textContent) {
+    try {
+      const contextForPersuasion = `
+CAMPAIGN OBJECTIVE: ${campaignObjective}
+
+CURRENT MARKETING CONTENT:
+${textContent}
+
+PRODUCTS:
+${productList.map(p => `${p.name} - $${p.price}`).join(', ')}
+
+Please suggest persuasive enhancements for this widget content.`;
+
+      const persuasionResult = await this.specialists.persuasion.createPersuasiveContent(contextForPersuasion);
+
+      return {
+        success: true,
+        agent: persuasionResult.agent,
+        enhancements: persuasionResult.content,
+        tactics: this.extractPersuasionTactics(persuasionResult.content),
+        timestamp: persuasionResult.timestamp
+      };
+
+    } catch (error) {
+      console.error('Persuasion enhancement step error:', error);
+      return {
+        success: false,
+        error: error.message,
+        enhancements: 'No persuasion enhancements available'
+      };
+    }
+  }
+
+  // Helper: Parse ethics agent response
+  parseEthicsResponse(ethicsReview) {
+    const reviewLower = ethicsReview.toLowerCase();
+    
+    // Look for approval/rejection indicators
+    const approvalIndicators = ['approved', 'appropriate', 'acceptable', 'ethical', 'recommended'];
+    const rejectionIndicators = ['rejected', 'inappropriate', 'unethical', 'concerning', 'problematic'];
+    
+    const hasApproval = approvalIndicators.some(indicator => reviewLower.includes(indicator));
+    const hasRejection = rejectionIndicators.some(indicator => reviewLower.includes(indicator));
+    
+    // Default to approved unless explicitly rejected
+    const approved = !hasRejection && (hasApproval || true);
+    
+    let reason = 'Standard ethics review completed';
+    let suggestions = [];
+    
+    if (!approved) {
+      reason = 'Content contains potentially inappropriate or manipulative elements';
+      suggestions = [
+        'Remove excessive urgency language',
+        'Focus on product benefits rather than pressure tactics',
+        'Ensure claims are accurate and substantiated',
+        'Consider user experience and trust-building'
+      ];
+    }
+
+    return {
+      approved: approved,
+      reason: reason,
+      suggestions: suggestions,
+      approvedContent: approved ? null : null // Let original content pass through if approved
+    };
+  }
+
+  // Helper: Extract persuasion tactics
+  extractPersuasionTactics(persuasionContent) {
+    const tactics = [];
+    const contentLower = persuasionContent.toLowerCase();
+    
+    if (contentLower.includes('urgency') || contentLower.includes('limited time')) {
+      tactics.push('urgency');
+    }
+    if (contentLower.includes('scarcity') || contentLower.includes('limited quantity')) {
+      tactics.push('scarcity');
+    }
+    if (contentLower.includes('social proof') || contentLower.includes('testimonial')) {
+      tactics.push('social_proof');
+    }
+    if (contentLower.includes('authority') || contentLower.includes('expert')) {
+      tactics.push('authority');
+    }
+    if (contentLower.includes('benefit') || contentLower.includes('advantage')) {
+      tactics.push('benefit_focus');
+    }
+    
+    return tactics.length > 0 ? tactics : ['general_persuasion'];
+  }
+
+  // ===== WIDGET RECOMMENDATION RETRIEVAL SYSTEM =====
+
+  // Get saved widget recommendations with filtering
+  getSavedWidgetRecommendations(filters = {}) {
+    try {
+      const { limit = 10, widgetType = null, approved = null, searchTerm = null } = filters;
+      
+      let widgets = Array.from(this.widgetRecommendations.values());
+      
+      // Filter by widget type
+      if (widgetType) {
+        widgets = widgets.filter(widget => widget.widgetType === widgetType);
+      }
+      
+      // Filter by ethics approval
+      if (approved !== null) {
+        widgets = widgets.filter(widget => widget.ethicsReview.approved === approved);
+      }
+      
+      // Filter by search term in campaign objective or content
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        widgets = widgets.filter(widget => 
+          widget.campaignObjective.toLowerCase().includes(searchLower) ||
+          widget.textGeneration.content.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // Sort by creation date (newest first)
+      widgets.sort((a, b) => new Date(b.generatedAt) - new Date(a.generatedAt));
+      
+      // Apply limit
+      const limitedWidgets = widgets.slice(0, limit);
+      
+      return {
+        success: true,
+        widgets: limitedWidgets,
+        total: widgets.length,
+        filtered: limitedWidgets.length,
+        hasMore: widgets.length > limit
+      };
+
+    } catch (error) {
+      console.error('Error retrieving saved widget recommendations:', error);
+      return {
+        success: false,
+        widgets: [],
+        total: 0,
+        error: error.message
+      };
+    }
+  }
+
+  // Get specific widget by ID
+  getWidgetRecommendationById(widgetId) {
+    try {
+      if (!this.widgetRecommendations.has(widgetId)) {
+        return {
+          success: false,
+          message: 'Widget not found'
+        };
+      }
+      
+      const widget = this.widgetRecommendations.get(widgetId);
+      
+      return {
+        success: true,
+        widget: widget,
+        summary: {
+          id: widget.id,
+          campaignObjective: widget.campaignObjective,
+          widgetType: widget.widgetType,
+          ethicsApproved: widget.ethicsReview.approved,
+          productCount: widget.productCount,
+          generatedAt: widget.generatedAt
+        }
+      };
+
+    } catch (error) {
+      console.error('Error retrieving widget by ID:', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve widget',
+        error: error.message
+      };
+    }
+  }
+
+  // Delete a saved widget recommendation
+  deleteWidgetRecommendation(widgetId) {
+    try {
+      if (!this.widgetRecommendations.has(widgetId)) {
+        return {
+          success: false,
+          message: 'Widget not found'
+        };
+      }
+      
+      this.widgetRecommendations.delete(widgetId);
+      
+      return {
+        success: true,
+        message: 'Widget deleted successfully',
+        deletedId: widgetId
+      };
+
+    } catch (error) {
+      console.error('Error deleting widget recommendation:', error);
+      return {
+        success: false,
+        message: 'Failed to delete widget',
+        error: error.message
+      };
+    }
+  }
+
+  // Clear all saved widget recommendations
+  clearWidgetRecommendations() {
+    try {
+      const count = this.widgetRecommendations.size;
+      this.widgetRecommendations.clear();
+      this.nextWidgetId = 1;
+      
+      return {
+        success: true,
+        message: `Cleared ${count} saved widget recommendations`,
+        clearedCount: count
+      };
+
+    } catch (error) {
+      console.error('Error clearing widget recommendations:', error);
+      return {
+        success: false,
+        message: 'Failed to clear widget recommendations',
+        error: error.message
+      };
+    }
+  }
+
+  // Get statistics about saved widget recommendations
+  getWidgetRecommendationsStats() {
+    try {
+      const widgets = Array.from(this.widgetRecommendations.values());
+      
+      const stats = {
+        totalWidgets: widgets.length,
+        byWidgetType: this.groupByField(widgets, 'widgetType'),
+        byEthicsApproval: {
+          approved: widgets.filter(w => w.ethicsReview.approved).length,
+          rejected: widgets.filter(w => !w.ethicsReview.approved).length
+        },
+        byStatus: this.groupByField(widgets, 'status'),
+        averageProductCount: widgets.length > 0 ? 
+          widgets.reduce((sum, w) => sum + w.productCount, 0) / widgets.length : 0,
+        oldestWidget: widgets.length > 0 ? 
+          Math.min(...widgets.map(w => new Date(w.generatedAt))) : null,
+        newestWidget: widgets.length > 0 ? 
+          Math.max(...widgets.map(w => new Date(w.generatedAt))) : null
+      };
+      
+      return {
+        success: true,
+        stats: stats
+      };
+
+    } catch (error) {
+      console.error('Error getting widget recommendations stats:', error);
+      return {
+        success: false,
+        stats: { totalWidgets: 0 },
+        error: error.message
+      };
     }
   }
 }

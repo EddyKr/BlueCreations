@@ -1,0 +1,442 @@
+{
+	"info": {
+		"_postman_id": "generate-endpoint-test",
+		"name": "Generate & Campaign Management",
+		"description": "Test collection for generation, saving, and managing campaigns with UUID",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Generate 3 Variations - All Products (HTML/CSS)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"campaignObjective\": \"Showcase premium sports equipment for serious athletes looking to improve their performance this season\",\n  \"additionalPrompt\": \"Emphasize quality, performance, and professional-grade features\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/generate",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"generate"
+					]
+				},
+				"description": "Generate 3 widget variations (product_cards, banner, compact) with HTML, CSS, and persuasion text using all products"
+			}
+		},
+		{
+			"name": "Generate 3 Variations - Tennis Only (HTML/CSS)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"campaignObjective\": \"Promote tennis equipment for players preparing for tournament season\",\n  \"category\": \"tennis\",\n  \"additionalPrompt\": \"Focus on performance and competitive advantage\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/generate",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"generate"
+					]
+				},
+				"description": "Generate HTML/CSS widgets focusing only on tennis products with persuasion text"
+			}
+		},
+		{
+			"name": "Save Campaign Variation",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"campaignName\": \"Premium Tennis Equipment Campaign\",\n  \"campaignObjective\": \"Promote high-end tennis gear for competitive players\",\n  \"category\": \"tennis\",\n  \"additionalPrompt\": \"Emphasize professional performance and tournament readiness\",\n  \"notes\": \"Target audience: competitive tennis players, age 18-45\",\n  \"variation\": {\n    \"widgetType\": \"product_cards\",\n    \"html\": \"<div class=\\\"product-cards-widget\\\"><h2>Premium Tennis Equipment</h2><div class=\\\"product-card\\\"><h3>Wilson Carbon Pro Racket</h3><p class=\\\"price\\\">$249.99</p><button>Add to Cart</button></div></div>\",\n    \"css\": \".product-cards-widget { padding: 1.5rem; background: #f8f9fa; } .product-card { border: 1px solid #ddd; padding: 1rem; border-radius: 8px; }\",\n    \"text\": \"Experience tournament-level performance with our premium tennis equipment. Crafted for champions who demand excellence in every match.\"\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/save-campaign",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"save-campaign"
+					]
+				},
+				"description": "Save a generated campaign variation with UUID"
+			}
+		},
+		{
+			"name": "Get All Campaigns",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/campaigns",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"campaigns"
+					]
+				},
+				"description": "Get all saved campaigns with pagination"
+			}
+		},
+		{
+			"name": "Get Campaigns with Filters",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/campaigns?category=tennis&limit=10&search=premium",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"campaigns"
+					],
+					"query": [
+						{
+							"key": "category",
+							"value": "tennis"
+						},
+						{
+							"key": "limit",
+							"value": "10"
+						},
+						{
+							"key": "search",
+							"value": "premium"
+						}
+					]
+				},
+				"description": "Get campaigns filtered by category and search term"
+			}
+		},
+		{
+			"name": "Get Specific Campaign",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/campaigns/{{campaign_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"campaigns",
+						"{{campaign_id}}"
+					]
+				},
+				"description": "Get a specific campaign by UUID (set campaign_id variable)"
+			}
+		},
+		{
+			"name": "Update Campaign",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Updated Premium Tennis Campaign\",\n  \"notes\": \"Updated targeting: focus on advanced players preparing for regional tournaments\",\n  \"variation\": {\n    \"text\": \"Elevate your game to championship level with our updated premium tennis collection. Built for winners who accept nothing less than perfection.\"\n  }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/campaigns/{{campaign_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"campaigns",
+						"{{campaign_id}}"
+					]
+				},
+				"description": "Update a specific campaign by UUID"
+			}
+		},
+		{
+			"name": "Delete Campaign",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/campaigns/{{campaign_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"campaigns",
+						"{{campaign_id}}"
+					]
+				},
+				"description": "Delete a specific campaign by UUID"
+			}
+		},
+		{
+			"name": "Get Campaign Statistics",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/campaigns-stats",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"campaigns-stats"
+					]
+				},
+				"description": "Get statistics about saved campaigns"
+			}
+		},
+		{
+			"name": "Generate 3 Variations - Golf Only (HTML/CSS)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"campaignObjective\": \"Help golfers lower their handicap with professional-grade equipment\",\n  \"category\": \"golf\",\n  \"additionalPrompt\": \"Emphasize precision, accuracy, and tour-level performance\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/generate",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"generate"
+					]
+				},
+				"description": "Generate HTML/CSS widgets for golf products only with persuasion messaging"
+			}
+		},
+		{
+			"name": "Generate 3 Variations - Soccer Only (HTML/CSS)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"campaignObjective\": \"Equip soccer players with FIFA-approved gear for competitive matches\",\n  \"category\": \"soccer\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/generate",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"generate"
+					]
+				},
+				"description": "Test soccer category HTML/CSS generation with no additional prompt"
+			}
+		},
+		{
+			"name": "Generate 3 Variations - Hockey Only (HTML/CSS)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"campaignObjective\": \"Outfit hockey players with professional-grade protective equipment\",\n  \"category\": \"hockey\",\n  \"additionalPrompt\": \"Emphasize safety, durability, and professional standards\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/generate",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"generate"
+					]
+				},
+				"description": "Generate HTML/CSS widgets for hockey equipment with safety-focused persuasion"
+			}
+		},
+		{
+			"name": "Get Available Categories",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/categories",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"categories"
+					]
+				},
+				"description": "Get all available product categories and counts"
+			}
+		},
+		{
+			"name": "Get All Products",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/products",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"products"
+					]
+				},
+				"description": "Get all products from the data folder"
+			}
+		},
+		{
+			"name": "Get Products by Category",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/products?category=tennis",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"products"
+					],
+					"query": [
+						{
+							"key": "category",
+							"value": "tennis"
+						}
+					]
+				},
+				"description": "Get products filtered by category"
+			}
+		},
+		{
+			"name": "Test Error - Missing Campaign Objective",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"additionalPrompt\": \"This should fail\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/generate",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"generate"
+					]
+				},
+				"description": "Test error handling when campaignObjective is missing"
+			}
+		},
+		{
+			"name": "Test Error - Invalid Category",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"campaignObjective\": \"Test campaign with invalid category\",\n  \"category\": \"basketball\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/generate",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"generate"
+					]
+				},
+				"description": "Test error handling when category doesn't exist"
+			}
+		},
+		{
+			"name": "Test Error - Save Campaign Missing Data",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"campaignName\": \"Incomplete Campaign\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/save-campaign",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"save-campaign"
+					]
+				},
+				"description": "Test error handling when save-campaign is missing required data"
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "campaign_id",
+			"value": "set-after-saving-campaign",
+			"type": "string",
+			"description": "Set this to a valid campaign UUID after saving a campaign"
+		}
+	]
+} 

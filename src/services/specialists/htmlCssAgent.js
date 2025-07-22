@@ -161,6 +161,138 @@ Provide specific UI/UX recommendations with implementation details.`
   getPersonality() {
     return this.personality;
   }
+
+  // ===== NEW: EMBEDDABLE RECOMMENDATION WIDGET GENERATOR =====
+  async generateRecommendationWidget(campaignObjective, productList, additionalPrompt = '', widgetType = 'product_cards') {
+    try {
+      const prompt = {
+        system: this.personality.systemPrompt + `
+
+FOCUS: Generate complete, embeddable HTML/CSS recommendation widgets that can be directly inserted into any website div.
+
+WIDGET GENERATION RULES:
+- Create self-contained HTML/CSS code
+- Use inline CSS or embedded <style> tags (no external dependencies)
+- Ensure mobile-responsive design
+- Include proper accessibility attributes
+- Use semantic HTML structure
+- Generate modern, clean, conversion-focused design
+- Make it ready for copy-paste embedding
+
+AVAILABLE WIDGET TYPES:
+- product_cards: Individual product cards in a grid/flex layout
+- banner: Horizontal banner with products
+- carousel: Scrollable product carousel
+- list: Vertical list with product details
+- hero: Large featured recommendation section
+- compact: Minimal space-efficient design`,
+
+        user: `CAMPAIGN OBJECTIVE:
+${campaignObjective}
+
+PRODUCT LIST:
+${JSON.stringify(productList, null, 2)}
+
+WIDGET TYPE: ${widgetType}
+
+${additionalPrompt ? `ADDITIONAL REQUIREMENTS: ${additionalPrompt}` : ''}
+
+Generate a complete, embeddable HTML/CSS recommendation widget that:
+
+1. Displays the products in an attractive, conversion-focused layout
+2. Includes compelling copy aligned with the campaign objective
+3. Has clear call-to-action buttons
+4. Is fully responsive and mobile-friendly
+5. Uses modern CSS techniques (flexbox/grid)
+6. Includes hover effects and micro-interactions
+7. Has proper semantic HTML structure
+8. Can be directly copied and pasted into any website div
+
+Return ONLY the complete HTML/CSS code (including <style> tags) that can be embedded. No explanations outside the code.`
+      };
+
+      const response = await openaiService.createSimpleCompletion(prompt, {
+        model: openaiService.getAvailableModels().GPT_4O,
+        maxTokens: openaiService.getTokenLimits().EXTENDED,
+        temperature: 0.4
+      });
+
+      // Clean up the response to ensure it's pure HTML/CSS
+      const cleanedCode = this.cleanWidgetCode(response);
+
+      return {
+        agent: this.personality.name,
+        role: this.personality.role,
+        widgetCode: cleanedCode,
+        widgetType: widgetType,
+        campaignObjective: campaignObjective,
+        productCount: productList.length,
+        timestamp: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error('Widget generation error:', error);
+      throw new Error(`Widget generation failed: ${error.message}`);
+    }
+  }
+
+  // Clean and validate the generated widget code
+  cleanWidgetCode(rawCode) {
+    // Remove any markdown code blocks
+    let cleanCode = rawCode.replace(/```html|```css|```/g, '').trim();
+    
+    // Ensure it starts with proper HTML
+    if (!cleanCode.startsWith('<')) {
+      // If no HTML structure, wrap in a div
+      cleanCode = `<div class="recommendation-widget">\n${cleanCode}\n</div>`;
+    }
+    
+    // Add a default style block if none exists and contains HTML
+    if (cleanCode.includes('<') && !cleanCode.includes('<style')) {
+      const defaultStyles = `
+<style>
+.recommendation-widget {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  max-width: 100%;
+  margin: 0 auto;
+}
+</style>`;
+      cleanCode = defaultStyles + '\n' + cleanCode;
+    }
+    
+    return cleanCode;
+  }
+
+  // Generate multiple widget variations for A/B testing
+  async generateWidgetVariations(campaignObjective, productList, additionalPrompt = '') {
+    try {
+      const widgetTypes = ['product_cards', 'banner', 'compact'];
+      const variations = [];
+
+      for (const widgetType of widgetTypes) {
+        const widget = await this.generateRecommendationWidget(
+          campaignObjective,
+          productList,
+          additionalPrompt,
+          widgetType
+        );
+        variations.push(widget);
+      }
+
+      return {
+        agent: this.personality.name,
+        role: this.personality.role,
+        variations: variations,
+        campaignObjective: campaignObjective,
+        totalVariations: variations.length,
+        timestamp: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error('Widget variations generation error:', error);
+      throw new Error(`Widget variations generation failed: ${error.message}`);
+    }
+  }
 }
 
 module.exports = new HtmlCssAgent(); 

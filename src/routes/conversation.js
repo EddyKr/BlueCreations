@@ -1,405 +1,547 @@
 const express = require('express');
 const conversationalAgent = require('../services/conversationalAgent');
 const multiAgentOrchestrator = require('../services/multiAgentOrchestrator');
-const recommendationEngine = require('../services/recommendationEngine');
 
 const router = express.Router();
 
-// Start new conversation (now just processes a message)
-router.post('/start', async (req, res) => {
-  try {
-    const { message, profileId } = req.body;
-    
-    const initialInput = {};
-    if (message) {
-      initialInput.message = message.trim();
-    }
-    if (profileId) {
-      initialInput.profileId = profileId;
-    }
-    
-    const response = await conversationalAgent.startConversation(initialInput);
-    
-    res.json({
-      success: true,
-      data: {
-        message: response.message,
-        agent: response.agent,
-        timestamp: response.timestamp,
-        userProfile: response.userProfile
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to process message', details: error.message }
-    });
-  }
-});
+// ===== BACK OFFICE HTML/CSS WIDGET GENERATION ENDPOINTS =====
 
-// Continue conversation (now just processes a message, ignoring conversationId)
-router.post('/:conversationId/continue', async (req, res) => {
+// Generate comprehensive multi-agent recommendation widget
+router.post('/backoffice/widgets/comprehensive-generate', async (req, res) => {
   try {
-    const { message, profileId } = req.body;
+    const { campaignObjective, productList, additionalPrompt, widgetType = 'product_cards' } = req.body;
     
-    if (!message?.trim()) {
+    // Validate required fields
+    if (!campaignObjective?.trim()) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Message is required' }
+        error: { message: 'Campaign objective is required' }
       });
     }
 
-    const userInput = { 
-      message: message.trim(),
-      profileId: profileId || null
-    };
-    
-    const response = await conversationalAgent.continueConversation(null, userInput);
-    
-    res.json({
-      success: true,
-      data: {
-        message: response.message,
-        agent: response.agent,
-        timestamp: response.timestamp,
-        userProfile: response.userProfile
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to process message', details: error.message }
-    });
-  }
-});
-
-// Process message directly (new simplified endpoint)
-router.post('/message', async (req, res) => {
-  try {
-    const { message, profileId } = req.body;
-    
-    if (!message?.trim()) {
+    if (!productList || !Array.isArray(productList) || productList.length === 0) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Message is required' }
+        error: { message: 'Product list is required and must be a non-empty array' }
       });
     }
 
-    const userInput = { 
-      message: message.trim(),
-      profileId: profileId || null
-    };
-    
-    const response = await conversationalAgent.processMessage(userInput);
-    
-    res.json({
-      success: true,
-      data: {
-        message: response.message,
-        agent: response.agent,
-        timestamp: response.timestamp,
-        userProfile: response.userProfile
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to process message', details: error.message }
-    });
-  }
-});
+    // Generate widget using comprehensive multi-agent workflow
+    const result = await multiAgentOrchestrator.generateComprehensiveWidget(
+      campaignObjective,
+      productList,
+      additionalPrompt || '',
+      widgetType
+    );
 
-// Get conversation (now returns not found since we don't store conversations)
-router.get('/:conversationId', async (req, res) => {
-  res.status(404).json({
-    success: false,
-    error: { message: 'Conversations are no longer stored. Use /message endpoint for direct processing.' }
-  });
-});
-
-// List conversations (now returns empty array since we don't store conversations)
-router.get('/', async (req, res) => {
-  res.json({
-    success: true,
-    data: { 
-      conversations: [], 
-      count: 0,
-      message: 'Conversations are no longer stored. Use /message endpoint for direct processing.'
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Delete conversation (now returns success since nothing to delete)
-router.delete('/:conversationId', async (req, res) => {
-  res.json({
-    success: true,
-    data: { 
-      message: 'Conversations are no longer stored, nothing to delete',
-      conversationId: req.params.conversationId
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Get cached recommendations for specific message/profile combination
-router.post('/recommendations', async (req, res) => {
-  try {
-    const { message, profileId } = req.body;
-    
-    if (!message?.trim()) {
+    if (!result.success) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Message is required to lookup cached recommendations' }
-      });
-    }
-
-    const userProfile = multiAgentOrchestrator.getUserProfile(profileId);
-    const cachedRecommendations = multiAgentOrchestrator.getCachedRecommendations(message.trim(), userProfile);
-    
-    if (!cachedRecommendations) {
-      return res.status(404).json({
-        success: false,
-        error: { message: 'No cached recommendations found for this message and profile combination' }
+        error: { 
+          message: result.error,
+          details: result.ethicsReason,
+          suggestions: result.suggestedImprovements
+        }
       });
     }
 
     res.json({
       success: true,
       data: {
-        message: message.trim(),
-        profileId: profileId || null,
-        userProfile: userProfile ? { id: userProfile.id, segments: userProfile.segments } : null,
-        recommendations: cachedRecommendations,
-        totalRecommendations: cachedRecommendations.length,
-        requestHash: multiAgentOrchestrator.generateRequestHash(message.trim(), userProfile)
+        widgetId: result.widgetId,
+        finalWidgetCode: result.summary.finalWidgetCode,
+        workflow: {
+          textGenerated: result.summary.textGenerated,
+          ethicsApproved: result.summary.ethicsApproved,
+          htmlGenerated: result.summary.htmlGenerated,
+          persuasionEnhanced: result.summary.persuasionEnhanced
+        },
+        campaignObjective: campaignObjective,
+        widgetType: widgetType,
+        productCount: productList.length,
+        instructions: 'Widget generated through comprehensive multi-agent workflow. Copy finalWidgetCode to embed on your website.'
       },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to retrieve cached recommendations', details: error.message }
+      error: { message: 'Failed to generate comprehensive widget', details: error.message }
     });
   }
 });
 
-// Get cache statistics
-router.get('/cache/statistics', async (req, res) => {
+// Generate embeddable recommendation widget (Simple - direct to HTML agent)
+router.post('/backoffice/widgets/generate', async (req, res) => {
   try {
-    const stats = multiAgentOrchestrator.getCacheStatistics();
+    const { campaignObjective, productList, additionalPrompt, widgetType = 'product_cards' } = req.body;
     
-    res.json({
-      success: true,
-      data: {
-        ...stats,
-        cacheMaxAgeMinutes: stats.cacheMaxAge / (1000 * 60),
-        oldestEntryAge: stats.oldestEntry ? (Date.now() - stats.oldestEntry) / 1000 : null,
-        newestEntryAge: stats.newestEntry ? (Date.now() - stats.newestEntry) / 1000 : null
-      },
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to retrieve cache statistics', details: error.message }
-    });
-  }
-});
-
-// Clear recommendation cache
-router.delete('/cache', async (req, res) => {
-  try {
-    const result = multiAgentOrchestrator.clearRecommendationCache();
-    
-    res.json({
-      success: true,
-      data: result,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to clear recommendation cache', details: error.message }
-    });
-  }
-});
-
-// Get all cached recommendation hashes (for debugging)
-router.get('/cache/entries', async (req, res) => {
-  try {
-    const stats = multiAgentOrchestrator.getCacheStatistics();
-    
-    // Get basic info about all cache entries without exposing full content
-    const entries = [];
-    multiAgentOrchestrator.recommendationCache.forEach((value, key) => {
-      entries.push({
-        hash: key,
-        timestamp: value.timestamp,
-        age: (Date.now() - value.timestamp) / 1000,
-        recommendationCount: value.recommendations.length,
-        approaches: value.recommendations.map(r => r.approach)
-      });
-    });
-
-    res.json({
-      success: true,
-      data: {
-        totalEntries: entries.length,
-        entries: entries.sort((a, b) => b.timestamp - a.timestamp), // newest first
-        statistics: stats
-      },
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to retrieve cache entries', details: error.message }
-    });
-  }
-});
-
-// ===== PERSONA-BASED RECOMMENDATION ENDPOINTS =====
-
-// Generate recommendations for all personas and products
-router.post('/recommendations/generate', async (req, res) => {
-  try {
-    const result = await recommendationEngine.generateAllRecommendations();
-    
-    res.json({
-      success: true,
-      data: result,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    if (error.message.includes('already in progress')) {
-      return res.status(409).json({
+    // Validate required fields
+    if (!campaignObjective?.trim()) {
+      return res.status(400).json({
         success: false,
-        error: { message: 'Recommendation generation already in progress. Please wait and try again.' }
+        error: { message: 'Campaign objective is required' }
       });
     }
-    
+
+    if (!productList || !Array.isArray(productList) || productList.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Product list is required and must be a non-empty array' }
+      });
+    }
+
+    // Generate widget using HTML/CSS agent directly (legacy endpoint)
+    const result = await multiAgentOrchestrator.specialists.htmlCss.generateRecommendationWidget(
+      campaignObjective,
+      productList,
+      additionalPrompt || '',
+      widgetType
+    );
+
+    res.json({
+      success: true,
+      data: {
+        widgetCode: result.widgetCode,
+        widgetType: result.widgetType,
+        campaignObjective: result.campaignObjective,
+        productCount: result.productCount,
+        generatedBy: result.agent,
+        instructions: 'Copy the widgetCode and paste it directly into any HTML div on your website',
+        note: 'This is the simple generation endpoint. Use /comprehensive-generate for full multi-agent workflow.'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to generate recommendations', details: error.message }
+      error: { message: 'Failed to generate widget', details: error.message }
     });
   }
 });
 
-// Get stored recommendations with minimal filtering
-router.get('/recommendations/list', async (req, res) => {
+// ===== SAVED WIDGET RECOMMENDATIONS MANAGEMENT =====
+
+// Get all saved widget recommendations
+router.get('/backoffice/widgets/saved', async (req, res) => {
   try {
     const filters = {
-      sportInterest: req.query.sport,
-      budgetRange: req.query.budget,
-      skillLevel: req.query.skill,
-      segment: req.query.segment,
-      limit: req.query.limit ? parseInt(req.query.limit) : 10
+      limit: req.query.limit ? Math.min(parseInt(req.query.limit), 50) : 10,
+      widgetType: req.query.widgetType || null,
+      approved: req.query.approved ? req.query.approved === 'true' : null,
+      searchTerm: req.query.searchTerm || null
     };
 
-    const result = recommendationEngine.getRecommendations(filters);
+    const result = multiAgentOrchestrator.getSavedWidgetRecommendations(filters);
     
     res.json({
       success: result.success,
-      data: result,
+      data: {
+        widgets: result.widgets.map(widget => ({
+          id: widget.id,
+          campaignObjective: widget.campaignObjective,
+          widgetType: widget.widgetType,
+          productCount: widget.productCount,
+          ethicsApproved: widget.ethicsReview.approved,
+          generatedAt: widget.generatedAt,
+          status: widget.status,
+          // Include basic summary but not full specialist outputs
+          textAgent: widget.textGeneration.agent,
+          htmlAgent: widget.htmlGeneration.agent,
+          persuasionTactics: widget.persuasionEnhancement.persuasionTactics
+        })),
+        total: result.total,
+        filtered: result.filtered,
+        hasMore: result.hasMore,
+        filters: filters
+      },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to retrieve recommendations', details: error.message }
+      error: { message: 'Failed to retrieve saved widgets', details: error.message }
     });
   }
 });
 
-// Get recommendation statistics
-router.get('/recommendations/stats', async (req, res) => {
+// Get specific saved widget by ID with full details
+router.get('/backoffice/widgets/saved/:widgetId', async (req, res) => {
   try {
-    const stats = recommendationEngine.getStatistics();
+    const { widgetId } = req.params;
+    const { includeFullDetails = 'false' } = req.query;
     
-    res.json({
-      success: true,
-      data: stats,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to retrieve recommendation statistics', details: error.message }
-    });
-  }
-});
-
-// Clear all stored recommendations
-router.delete('/recommendations', async (req, res) => {
-  try {
-    const result = recommendationEngine.clearRecommendations();
-    
-    res.json({
-      success: true,
-      data: result,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to clear recommendations', details: error.message }
-    });
-  }
-});
-
-// Quick recommendation lookup for website visitors (minimal data required)
-router.get('/recommendations/quick', async (req, res) => {
-  try {
-    // Get basic recommendations with very minimal filtering
-    const sport = req.query.sport || null;
-    const budget = req.query.budget || null;
-    const limit = Math.min(parseInt(req.query.limit) || 5, 10); // Max 10 items
-
-    const filters = {
-      sportInterest: sport,
-      budgetRange: budget,
-      limit: limit
-    };
-
-    const result = recommendationEngine.getRecommendations(filters);
+    const result = multiAgentOrchestrator.getWidgetRecommendationById(widgetId);
     
     if (!result.success) {
-      return res.json({
+      return res.status(404).json({
         success: false,
-        message: result.message,
-        recommendations: [],
-        timestamp: new Date().toISOString()
+        error: { message: result.message }
       });
     }
 
-    // Simplify response for quick website access
-    const quickRecommendations = result.recommendations.map(rec => ({
-      type: rec.type || 'persona-based',
-      category: rec.category || rec.sportInterests?.[0] || 'general',
-      products: rec.recommendedProducts.slice(0, 3).map(product => ({
-        id: product.id,
-        name: product.name,
-        brand: product.brand,
-        discountedPrice: product.discountedPrice,
-        originalPrice: product.originalPrice,
-        discount: product.discount,
-        reason: product.recommendationReason
-      }))
-    }));
+    // Return summary or full details based on query parameter
+    const responseData = includeFullDetails === 'true' ? 
+      result.widget : // Full widget data with all specialist outputs
+      {
+        ...result.summary,
+        finalWidgetCode: result.widget.htmlGeneration.widgetCode,
+        instructions: 'Copy finalWidgetCode to embed this widget on your website'
+      };
 
     res.json({
       success: true,
-      recommendations: quickRecommendations.slice(0, limit),
-      total: quickRecommendations.length,
+      data: responseData,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to retrieve quick recommendations', details: error.message }
+      error: { message: 'Failed to retrieve widget', details: error.message }
     });
   }
 });
 
-module.exports = router; 
+// Get widget code only (for embedding)
+router.get('/backoffice/widgets/saved/:widgetId/code', async (req, res) => {
+  try {
+    const { widgetId } = req.params;
+    
+    const result = multiAgentOrchestrator.getWidgetRecommendationById(widgetId);
+    
+    if (!result.success) {
+      return res.status(404).json({
+        success: false,
+        error: { message: result.message }
+      });
+    }
+
+    // Return just the HTML/CSS code for embedding
+    res.json({
+      success: true,
+      data: {
+        widgetId: widgetId,
+        widgetCode: result.widget.htmlGeneration.widgetCode,
+        widgetType: result.widget.widgetType,
+        campaignObjective: result.widget.campaignObjective,
+        ethicsApproved: result.widget.ethicsReview.approved,
+        instructions: 'Copy this code and paste directly into any div on your website'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to retrieve widget code', details: error.message }
+    });
+  }
+});
+
+// Delete a saved widget recommendation
+router.delete('/backoffice/widgets/saved/:widgetId', async (req, res) => {
+  try {
+    const { widgetId } = req.params;
+    
+    const result = multiAgentOrchestrator.deleteWidgetRecommendation(widgetId);
+    
+    if (!result.success) {
+      return res.status(404).json({
+        success: false,
+        error: { message: result.message }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to delete widget', details: error.message }
+    });
+  }
+});
+
+// Clear all saved widget recommendations
+router.delete('/backoffice/widgets/saved', async (req, res) => {
+  try {
+    const result = multiAgentOrchestrator.clearWidgetRecommendations();
+    
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to clear widget recommendations', details: error.message }
+    });
+  }
+});
+
+// Get statistics about saved widget recommendations
+router.get('/backoffice/widgets/stats', async (req, res) => {
+  try {
+    const result = multiAgentOrchestrator.getWidgetRecommendationsStats();
+    
+    res.json({
+      success: result.success,
+      data: result.stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to retrieve widget statistics', details: error.message }
+    });
+  }
+});
+
+// Generate multiple widget variations for A/B testing
+router.post('/backoffice/widgets/variations', async (req, res) => {
+  try {
+    const { campaignObjective, productList, additionalPrompt } = req.body;
+    
+    // Validate required fields
+    if (!campaignObjective?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Campaign objective is required' }
+      });
+    }
+
+    if (!productList || !Array.isArray(productList) || productList.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Product list is required and must be a non-empty array' }
+      });
+    }
+
+    // Generate multiple widget variations
+    const result = await multiAgentOrchestrator.specialists.htmlCss.generateWidgetVariations(
+      campaignObjective,
+      productList,
+      additionalPrompt || ''
+    );
+
+    res.json({
+      success: true,
+      data: {
+        variations: result.variations.map(variation => ({
+          widgetCode: variation.widgetCode,
+          widgetType: variation.widgetType,
+          instructions: `${variation.widgetType.toUpperCase()}: Copy this code and paste into any HTML div`
+        })),
+        campaignObjective: result.campaignObjective,
+        totalVariations: result.totalVariations,
+        generatedBy: result.agent,
+        usage: 'Use different variations for A/B testing to optimize conversions'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to generate widget variations', details: error.message }
+    });
+  }
+});
+
+// Generate widget with AI-selected products from catalog
+router.post('/backoffice/widgets/smart-generate', async (req, res) => {
+  try {
+    const { campaignObjective, productCriteria, additionalPrompt, widgetType = 'product_cards', maxProducts = 4, useComprehensive = false } = req.body;
+    
+    // Validate required fields
+    if (!campaignObjective?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Campaign objective is required' }
+      });
+    }
+
+    if (!productCriteria) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Product criteria is required (e.g., category, price range, etc.)' }
+      });
+    }
+
+    // Load products from catalog
+    const allProducts = multiAgentOrchestrator.loadProducts();
+    
+    if (allProducts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'No products available in catalog' }
+      });
+    }
+
+    // Simple product filtering based on criteria
+    let filteredProducts = allProducts;
+    
+    if (productCriteria.category) {
+      filteredProducts = filteredProducts.filter(p => 
+        p.category && p.category.toLowerCase().includes(productCriteria.category.toLowerCase())
+      );
+    }
+    
+    if (productCriteria.maxPrice) {
+      filteredProducts = filteredProducts.filter(p => p.price <= productCriteria.maxPrice);
+    }
+    
+    if (productCriteria.minPrice) {
+      filteredProducts = filteredProducts.filter(p => p.price >= productCriteria.minPrice);
+    }
+    
+    if (productCriteria.brand) {
+      filteredProducts = filteredProducts.filter(p => 
+        p.brand && p.brand.toLowerCase().includes(productCriteria.brand.toLowerCase())
+      );
+    }
+
+    // Select top products (by stock and discount)
+    const selectedProducts = filteredProducts
+      .sort((a, b) => (b.stock + b.discount) - (a.stock + a.discount))
+      .slice(0, maxProducts);
+
+    if (selectedProducts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'No products match the specified criteria' }
+      });
+    }
+
+    // Choose generation method based on useComprehensive flag
+    let result;
+    if (useComprehensive) {
+      result = await multiAgentOrchestrator.generateComprehensiveWidget(
+        campaignObjective,
+        selectedProducts,
+        additionalPrompt || '',
+        widgetType
+      );
+      
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          error: { 
+            message: result.error,
+            details: result.ethicsReason,
+            suggestions: result.suggestedImprovements
+          }
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: {
+          widgetId: result.widgetId,
+          widgetCode: result.summary.finalWidgetCode,
+          widgetType: widgetType,
+          campaignObjective: campaignObjective,
+          productCount: selectedProducts.length,
+          selectedProducts: selectedProducts.map(p => ({ id: p.id, name: p.name, price: p.price })),
+          productCriteria: productCriteria,
+          workflow: result.summary,
+          generationMethod: 'comprehensive',
+          instructions: 'Widget generated through comprehensive multi-agent workflow and saved to collection.'
+        },
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      result = await multiAgentOrchestrator.specialists.htmlCss.generateRecommendationWidget(
+        campaignObjective,
+        selectedProducts,
+        additionalPrompt || '',
+        widgetType
+      );
+
+      res.json({
+        success: true,
+        data: {
+          widgetCode: result.widgetCode,
+          widgetType: result.widgetType,
+          campaignObjective: campaignObjective,
+          productCount: result.productCount,
+          selectedProducts: selectedProducts.map(p => ({ id: p.id, name: p.name, price: p.price })),
+          productCriteria: productCriteria,
+          generatedBy: result.agent,
+          generationMethod: 'simple',
+          instructions: 'Copy the widgetCode and paste it directly into any HTML div on your website'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to generate smart widget', details: error.message }
+    });
+  }
+});
+
+// Get available widget types and their descriptions
+router.get('/backoffice/widgets/types', async (req, res) => {
+  try {
+    const widgetTypes = [
+      {
+        type: 'product_cards',
+        name: 'Product Cards',
+        description: 'Individual product cards in a grid layout - best for showcasing 2-6 products',
+        bestFor: 'Product showcases, featured items, category recommendations'
+      },
+      {
+        type: 'banner',
+        name: 'Horizontal Banner',
+        description: 'Horizontal banner layout with products side by side',
+        bestFor: 'Header/footer placements, promotional sections'
+      },
+      {
+        type: 'carousel',
+        name: 'Product Carousel',
+        description: 'Scrollable product carousel with navigation arrows',
+        bestFor: 'Displaying many products in limited space'
+      },
+      {
+        type: 'list',
+        name: 'Product List',
+        description: 'Vertical list with detailed product information',
+        bestFor: 'Sidebar recommendations, mobile-friendly displays'
+      },
+      {
+        type: 'hero',
+        name: 'Hero Section',
+        description: 'Large featured recommendation section with prominent call-to-action',
+        bestFor: 'Landing page headers, main promotional areas'
+      },
+      {
+        type: 'compact',
+        name: 'Compact Widget',
+        description: 'Minimal space-efficient design for tight layouts',
+        bestFor: 'Sidebar widgets, footer sections, mobile optimization'
+      }
+    ];
+
+    res.json({
+      success: true,
+      data: {
+        widgetTypes: widgetTypes,
+        totalTypes: widgetTypes.length,
+        usage: 'Choose the widget type that best fits your layout and campaign objective',
+        note: 'Use /comprehensive-generate for full multi-agent workflow including text generation, ethics review, and persuasion enhancement'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to retrieve widget types', details: error.message }
+    });
+  }
+});
+
+module.exports = router;

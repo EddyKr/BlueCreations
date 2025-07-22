@@ -1,5 +1,5 @@
 const multiAgentOrchestrator = require('./multiAgentOrchestrator');
-const recommendationEngine = require('./recommendationEngine');
+// const recommendationEngine = require('./recommendationEngine');
 
 class ConversationalAgent {
   constructor() {
@@ -74,26 +74,26 @@ class ConversationalAgent {
       const filters = this._extractRecommendationFilters(userMessage, userProfile);
       
       // Get recommendations from the engine
-      const recommendationResult = recommendationEngine.getRecommendations(filters);
+      // const recommendationResult = recommendationEngine.getRecommendations(filters);
       
-      if (!recommendationResult.success || recommendationResult.recommendations.length === 0) {
-        return {
-          timestamp: new Date(),
-          message: "I'd love to help with recommendations! First, let me generate some product suggestions. You can ask me again in a moment, or let me know what sport you're interested in and your budget range (budget/moderate/premium/luxury).",
-          agent: 'Maya (Quick Recommendation Agent)',
-          userProfile: userProfile ? { id: userProfile.id, segments: userProfile.segments } : null
-        };
-      }
+      // if (!recommendationResult.success || recommendationResult.recommendations.length === 0) {
+      //   return {
+      //     timestamp: new Date(),
+      //     message: "I'd love to help with recommendations! First, let me generate some product suggestions. You can ask me again in a moment, or let me know what sport you're interested in and your budget range (budget/moderate/premium/luxury).",
+      //     agent: 'Maya (Quick Recommendation Agent)',
+      //     userProfile: userProfile ? { id: userProfile.id, segments: userProfile.segments } : null
+      //   };
+      // }
 
-      // Format the recommendations into a natural response
-      const responseMessage = this._formatRecommendationResponse(recommendationResult.recommendations, userProfile, filters);
+      // // Format the recommendations into a natural response
+      // const responseMessage = this._formatRecommendationResponse(recommendationResult.recommendations, userProfile, filters);
 
-      return {
-        timestamp: new Date(),
-        message: responseMessage,
-        agent: 'Maya (Quick Recommendation Agent)',
-        userProfile: userProfile ? { id: userProfile.id, segments: userProfile.segments } : null
-      };
+      // return {
+      //   timestamp: new Date(),
+      //   message: responseMessage,
+      //   agent: 'Maya (Quick Recommendation Agent)',
+      //   userProfile: userProfile ? { id: userProfile.id, segments: userProfile.segments } : null
+      // };
 
     } catch (error) {
       console.error('Product recommendation error:', error);

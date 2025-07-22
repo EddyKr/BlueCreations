@@ -1,0 +1,532 @@
+{
+	"info": {
+		"_postman_id": "comprehensive-widget-generator",
+		"name": "Blue Creations - Comprehensive Multi-Agent Widget Generator",
+		"description": "Complete API collection for testing the multi-agent widget generation workflow: Text Generation → Ethics Review → Persuasion → HTML/CSS → Storage & Retrieval",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Multi-Agent Widget Generation",
+			"item": [
+				{
+					"name": "Comprehensive Generate - Tennis Premium",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"campaignObjective\": \"Showcase premium tennis equipment for serious players looking to improve their game this spring season. Focus on performance benefits and professional quality.\",\n  \"productList\": [\n    {\n      \"id\": \"tennis_racket_001\",\n      \"name\": \"Wilson Pro Staff RF97 Autograph\",\n      \"brand\": \"Wilson\",\n      \"price\": 249.99,\n      \"discount\": 15,\n      \"description\": \"Roger Federer's racket of choice, perfect for advanced players seeking precision and control\",\n      \"image\": \"https://example.com/wilson-rf97.jpg\",\n      \"category\": \"tennis\"\n    },\n    {\n      \"id\": \"tennis_shoes_002\",\n      \"name\": \"Nike Air Zoom Vapor X\",\n      \"brand\": \"Nike\",\n      \"price\": 139.99,\n      \"discount\": 20,\n      \"description\": \"Lightweight tennis shoes with superior court traction and responsive cushioning\",\n      \"image\": \"https://example.com/nike-vapor-x.jpg\",\n      \"category\": \"tennis\"\n    },\n    {\n      \"id\": \"tennis_bag_003\",\n      \"name\": \"Head Tour Team 9R Tennis Bag\",\n      \"brand\": \"Head\",\n      \"price\": 89.99,\n      \"discount\": 10,\n      \"description\": \"Spacious professional bag that holds up to 9 rackets plus accessories\",\n      \"image\": \"https://example.com/head-bag.jpg\",\n      \"category\": \"tennis\"\n    }\n  ],\n  \"widgetType\": \"product_cards\",\n  \"additionalPrompt\": \"Emphasize spring season preparation and performance improvements. Use professional tennis colors (navy, white, green).\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/comprehensive-generate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"comprehensive-generate"
+							]
+						},
+						"description": "Generate a comprehensive widget using all specialists: Text Generation → Ethics Review → Persuasion → HTML/CSS"
+					}
+				},
+				{
+					"name": "Comprehensive Generate - Budget Golf",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"campaignObjective\": \"Help beginner golfers get started with affordable, quality equipment that will improve their game without breaking the bank\",\n  \"productList\": [\n    {\n      \"id\": \"golf_glove_001\",\n      \"name\": \"Callaway Weather Spann Golf Glove\",\n      \"brand\": \"Callaway\",\n      \"price\": 19.99,\n      \"discount\": 25,\n      \"description\": \"All-weather synthetic leather glove for improved grip\",\n      \"image\": \"https://example.com/callaway-glove.jpg\",\n      \"category\": \"golf\"\n    },\n    {\n      \"id\": \"golf_balls_002\",\n      \"name\": \"Titleist Pro V1 Golf Balls (12-pack)\",\n      \"brand\": \"Titleist\",\n      \"price\": 54.99,\n      \"discount\": 15,\n      \"description\": \"Professional-grade golf balls for improved distance and accuracy\",\n      \"image\": \"https://example.com/titleist-prov1.jpg\",\n      \"category\": \"golf\"\n    }\n  ],\n  \"widgetType\": \"banner\",\n  \"additionalPrompt\": \"Focus on value for money and beginner-friendly messaging. Highlight savings and quality.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/comprehensive-generate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"comprehensive-generate"
+							]
+						},
+						"description": "Generate budget-focused golf widget through multi-agent workflow"
+					}
+				},
+				{
+					"name": "Comprehensive Smart Generate - Auto Product Selection",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"campaignObjective\": \"Promote intermediate-level tennis equipment for players looking to upgrade their game and take their skills to the next level\",\n  \"productCriteria\": {\n    \"category\": \"tennis\",\n    \"minPrice\": 50,\n    \"maxPrice\": 300\n  },\n  \"widgetType\": \"product_cards\",\n  \"maxProducts\": 4,\n  \"useComprehensive\": true,\n  \"additionalPrompt\": \"Emphasize skill improvement and competitive advantage for intermediate players\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/smart-generate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"smart-generate"
+							]
+						},
+						"description": "Smart generate with comprehensive workflow - automatically selects products and runs through all specialists"
+					}
+				}
+			]
+		},
+		{
+			"name": "Saved Widget Management",
+			"item": [
+				{
+					"name": "Get All Saved Widgets",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/saved?limit=20&approved=true",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"saved"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "approved",
+									"value": "true",
+									"description": "Only show ethics-approved widgets"
+								}
+							]
+						},
+						"description": "Get list of all saved widget recommendations with filtering"
+					}
+				},
+				{
+					"name": "Get Widget Summary by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/saved/widget_1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"saved",
+								"widget_1"
+							]
+						},
+						"description": "Get summary of a specific saved widget"
+					}
+				},
+				{
+					"name": "Get Widget Full Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/saved/widget_1?includeFullDetails=true",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"saved",
+								"widget_1"
+							],
+							"query": [
+								{
+									"key": "includeFullDetails",
+									"value": "true",
+									"description": "Include all specialist outputs and detailed workflow information"
+								}
+							]
+						},
+						"description": "Get complete details of a widget including all specialist outputs"
+					}
+				},
+				{
+					"name": "Get Widget Code for Embedding",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/saved/widget_1/code",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"saved",
+								"widget_1",
+								"code"
+							]
+						},
+						"description": "Get just the HTML/CSS code for embedding the widget"
+					}
+				},
+				{
+					"name": "Get Widget Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"stats"
+							]
+						},
+						"description": "Get statistics about all saved widget recommendations"
+					}
+				},
+				{
+					"name": "Search Saved Widgets",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/saved?searchTerm=tennis&widgetType=product_cards&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"saved"
+							],
+							"query": [
+								{
+									"key": "searchTerm",
+									"value": "tennis"
+								},
+								{
+									"key": "widgetType",
+									"value": "product_cards"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Search saved widgets by keyword and filter by type"
+					}
+				},
+				{
+					"name": "Delete Saved Widget",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/saved/widget_1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"saved",
+								"widget_1"
+							]
+						},
+						"description": "Delete a specific saved widget"
+					}
+				},
+				{
+					"name": "Clear All Saved Widgets",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/saved",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"saved"
+							]
+						},
+						"description": "Clear all saved widget recommendations (use with caution)"
+					}
+				}
+			]
+		},
+		{
+			"name": "Legacy Widget Generation",
+			"item": [
+				{
+					"name": "Simple Generate (Direct to HTML)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"campaignObjective\": \"Quick sidebar recommendations for soccer equipment\",\n  \"productList\": [\n    {\n      \"id\": \"soccer_ball_001\",\n      \"name\": \"Nike Strike Soccer Ball\",\n      \"brand\": \"Nike\",\n      \"price\": 29.99,\n      \"discount\": 0,\n      \"description\": \"Durable training soccer ball\",\n      \"image\": \"https://example.com/nike-strike.jpg\",\n      \"category\": \"soccer\"\n    }\n  ],\n  \"widgetType\": \"compact\",\n  \"additionalPrompt\": \"Minimal design for sidebar placement\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/generate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"generate"
+							]
+						},
+						"description": "Legacy endpoint - generates widget directly with HTML/CSS agent only"
+					}
+				},
+				{
+					"name": "Generate Variations for A/B Testing",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"campaignObjective\": \"Increase sales of premium running gear for marathon training\",\n  \"productList\": [\n    {\n      \"id\": \"running_shoes_001\",\n      \"name\": \"Nike Air Zoom Pegasus 39\",\n      \"brand\": \"Nike\",\n      \"price\": 129.99,\n      \"discount\": 18,\n      \"description\": \"Versatile running shoe for daily training\",\n      \"image\": \"https://example.com/nike-pegasus.jpg\",\n      \"category\": \"running\"\n    }\n  ],\n  \"additionalPrompt\": \"Focus on performance benefits and marathon training\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/variations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"variations"
+							]
+						},
+						"description": "Generate multiple widget variations for A/B testing"
+					}
+				}
+			]
+		},
+		{
+			"name": "Widget Information",
+			"item": [
+				{
+					"name": "Get Available Widget Types",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/types",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"types"
+							]
+						},
+						"description": "Get list of available widget types and their descriptions"
+					}
+				}
+			]
+		},
+		{
+			"name": "Demo Workflow Scenarios",
+			"item": [
+				{
+					"name": "Demo 1: Create Premium Tennis Widget",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"campaignObjective\": \"Create a compelling hero section for our premium tennis equipment collection, targeting serious players who want to elevate their game. Emphasize performance, quality, and competitive advantage.\",\n  \"productList\": [\n    {\n      \"id\": \"demo_racket_001\",\n      \"name\": \"Wilson Pro Staff RF97 Autograph\",\n      \"brand\": \"Wilson\",\n      \"price\": 249.99,\n      \"discount\": 20,\n      \"description\": \"Roger Federer's signature racket - the choice of champions\",\n      \"image\": \"https://example.com/wilson-rf97.jpg\",\n      \"category\": \"tennis\"\n    }\n  ],\n  \"widgetType\": \"hero\",\n  \"additionalPrompt\": \"Use tennis championship colors, include urgency for limited-time spring sale, emphasize professional endorsement\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/comprehensive-generate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"comprehensive-generate"
+							]
+						},
+						"description": "Full workflow demo: Text generation → Ethics review → Persuasion → HTML generation → Storage"
+					}
+				},
+				{
+					"name": "Demo 2: Retrieve and Use Generated Widget",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/saved/widget_1/code",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"saved",
+								"widget_1",
+								"code"
+							]
+						},
+						"description": "Retrieve the HTML/CSS code for embedding (run after Demo 1)"
+					}
+				},
+				{
+					"name": "Demo 3: Check Ethics Approval Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/saved?approved=false&limit=5",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"saved"
+							],
+							"query": [
+								{
+									"key": "approved",
+									"value": "false"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Check for any widgets rejected by ethics review"
+					}
+				},
+				{
+					"name": "Demo 4: Ethics Challenge - Aggressive Marketing",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"campaignObjective\": \"Create extremely urgent marketing to force immediate purchase of overpriced equipment using high-pressure sales tactics and manipulative psychological triggers\",\n  \"productList\": [\n    {\n      \"id\": \"overpriced_001\",\n      \"name\": \"Luxury Tennis Racket\",\n      \"brand\": \"Premium Brand\",\n      \"price\": 999.99,\n      \"discount\": 50,\n      \"description\": \"Overpriced tennis racket\",\n      \"image\": \"https://example.com/luxury-racket.jpg\",\n      \"category\": \"tennis\"\n    }\n  ],\n  \"widgetType\": \"banner\",\n  \"additionalPrompt\": \"Use fear of missing out, create false scarcity, pressure vulnerable customers\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/conversation/backoffice/widgets/comprehensive-generate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversation",
+								"backoffice",
+								"widgets",
+								"comprehensive-generate"
+							]
+						},
+						"description": "Demo of ethics agent rejecting inappropriate marketing content"
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+} 
