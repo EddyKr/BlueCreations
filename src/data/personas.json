@@ -1,0 +1,84 @@
+{
+  "userProfiles": [
+    {
+      "id": "8a1b2c3d-4e5f-6789-abcd-ef1234567890",
+      "creationDate": "2025-01-15T09:30:00.000Z",
+      "consentedObjectives": ["personalization", "analytics"],
+      "refusedObjectives": [],
+      "permissions": {
+        "level": "PERSONAL"
+      },
+      "properties": [
+        {
+          "id": "name",
+          "values": ["Sarah Johnson"]
+        },
+        {
+          "id": "age",
+          "values": ["32"]
+        },
+        {
+          "id": "location",
+          "values": ["San Francisco, CA"]
+        },
+        {
+          "id": "email",
+          "values": ["sarah.johnson@example.com"]
+        },
+        {
+          "id": "domaingroup",
+          "values": ["TECH_PROFESSIONAL"]
+        }
+      ],
+      "replaces": [],
+      "segments": [
+        {
+          "id": "tech-savvy-professional"
+        },
+        {
+          "id": "west-coast-urban"
+        }
+      ]
+    },
+    {
+      "id": "9b2c3d4e-5f67-8901-bcde-f23456789012",
+      "creationDate": "2025-02-03T14:45:00.000Z",
+      "consentedObjectives": ["basic_features"],
+      "refusedObjectives": ["data_sharing", "marketing"],
+      "permissions": {
+        "level": "BASIC"
+      },
+      "properties": [
+        {
+          "id": "name",
+          "values": ["Miguel Rodriguez"]
+        },
+        {
+          "id": "age",
+          "values": ["45"]
+        },
+        {
+          "id": "location",
+          "values": ["Austin, TX"]
+        },
+        {
+          "id": "email",
+          "values": ["m.rodriguez@example.com"]
+        },
+        {
+          "id": "domaingroup",
+          "values": ["SMALL_BUSINESS"]
+        }
+      ],
+      "replaces": [],
+      "segments": [
+        {
+          "id": "privacy-conscious"
+        },
+        {
+          "id": "business-owner"
+        }
+      ]
+    }
+  ]
+} 
