@@ -295,6 +295,96 @@ Generate ONE fresh, exciting message that stands out.`
     }
   }
 
+  async createHeaderCopy(conversationHistory, persuasionText = '', contentType = '') {
+    try {
+      // Use the same approach variety as the persuasion text
+      const approaches = [
+        'urgency_scarcity',
+        'social_proof',
+        'exclusive_vip',
+        'emotional_fomo',
+        'value_focused',
+        'risk_reversal',
+        'curiosity_gap',
+        'seasonal_trending'
+      ];
+      
+      const selectedApproach = approaches[Math.floor(Math.random() * approaches.length)];
+      
+      const prompt = {
+        system: this.personality.systemPrompt + `
+
+CURRENT APPROACH: ${selectedApproach}
+
+HEADER COPY FOCUS: Create compelling headlines that complement persuasion text.
+
+HEADER CHARACTERISTICS:
+- Short and punchy (3-8 words ideal)
+- Create immediate interest and curiosity
+- Match the emotional tone of the persuasion text
+- Use power words and active language
+- Avoid generic phrases like "Great Deals" or "Shop Now"
+- Create urgency or intrigue without being pushy
+- Should work as main page headers or section titles
+
+CREATIVE HEADER STYLES:
+- Question hooks: "Ready for the upgrade?"
+- Statement hooks: "Your style evolution starts here"
+- Number hooks: "3 ways to save big today"
+- Emotional hooks: "Feel the difference"
+- Mystery hooks: "The secret everyone's talking about"
+- Benefit hooks: "More for less, guaranteed"`,
+
+        user: `CONVERSATION HISTORY:
+${conversationHistory}
+
+${persuasionText ? `PERSUASION TEXT TO MATCH:
+${persuasionText}` : ''}
+
+${contentType ? `CONTENT TYPE REQUESTED: ${contentType}` : ''}
+
+Create a SHORT, POWERFUL header copy using the ${selectedApproach} approach that COMPLEMENTS the persuasion text.
+
+REQUIREMENTS:
+- 3-8 words maximum for main header
+- Match the tone and energy of the persuasion text
+- Use the same psychological approach (${selectedApproach})
+- Be creative and attention-grabbing
+- Should work well as a page/section header
+- Avoid clichéd phrases
+
+HEADER STYLE EXAMPLES:
+• "Flash Alert: Premium Unlocked"
+• "Members Only: Savings Inside"
+• "Plot Twist: Everything's Cheaper"
+• "Breaking: Your Upgrade Awaits"
+• "Exclusive Access: VIP Pricing"
+• "Secret Level: Unlocked"
+
+Generate ONE compelling header that matches the persuasion text vibe.`
+      };
+
+      const response = await openaiService.createSimpleCompletion(prompt, {
+        model: openaiService.getAvailableModels().GPT_4O,
+        maxTokens: openaiService.getTokenLimits().STANDARD,
+        temperature: 0.9 // Higher creativity to match persuasion text
+      });
+
+      return {
+        agent: this.personality.name,
+        role: this.personality.role,
+        headerCopy: response,
+        approach: selectedApproach,
+        analysisType: 'header_copy',
+        timestamp: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error('Header copy generation error:', error);
+      throw new Error(`Header copy generation failed: ${error.message}`);
+    }
+  }
+
   getPersonality() {
     return this.personality;
   }

@@ -79,7 +79,8 @@ router.post('/backoffice/generate', async (req, res) => {
         widgetType: variation.widgetType,
         html: variation.html,
         css: variation.css,
-        text: variation.text
+        text: cleanText(variation.text),
+        header: cleanText(variation.header)
       })),
       template: generateHtmlTemplate(),
       campaignObjective: campaignObjective,
@@ -652,8 +653,8 @@ async function generateHtmlCssVariation(widgetType, campaignObjective, productLi
     
     const enhancedPrompt = `${additionalPrompt || ''} ${stylePrompts[style] || ''}`;
     
-    // Generate persuasion text using LLM with brand styling
-    const persuasionText = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, enhancedPrompt, brandStyling);
+    // Generate persuasion text and header using LLM with brand styling
+    const persuasionData = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, enhancedPrompt, brandStyling);
 
     // Generate HTML/CSS widget using the htmlCssAgent with brand styling and style variation
     const htmlCssResult = await multiAgentOrchestrator.specialists.htmlCss.generateRecommendationWidget(
@@ -672,22 +673,56 @@ async function generateHtmlCssVariation(widgetType, campaignObjective, productLi
       widgetType: widgetType,
       html: html,
       css: css,
-      text: persuasionText
+      text: persuasionData.text,
+      header: persuasionData.header
     };
 
   } catch (error) {
     console.error(`Error generating ${widgetType} variation:`, error);
     
-    // Fallback with LLM text
-    const fallbackPersuasionText = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, brandStyling, true);
+    // Fallback with LLM text and header
+    const fallbackPersuasionData = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, brandStyling, true);
     
     return {
       widgetType: widgetType,
       html: generateFallbackHtml(widgetType, productList),
       css: generateFallbackCss(widgetType, brandStyling, style),
-      text: fallbackPersuasionText
+      text: fallbackPersuasionData.text,
+      header: fallbackPersuasionData.header
     };
   }
+}
+
+// Clean text by removing markdown, bullets, quotes, and other markup
+function cleanText(text) {
+  if (!text || typeof text !== 'string') return text;
+  
+  return text
+    // Remove markdown formatting
+    .replace(/\*\*(.*?)\*\*/g, '$1')  // Bold **text**
+    .replace(/\*(.*?)\*/g, '$1')      // Italic *text*
+    .replace(/__(.*?)__/g, '$1')      // Bold __text__
+    .replace(/_(.*?)_/g, '$1')        // Italic _text_
+    
+    // Remove bullets and list markers
+    .replace(/^[\s]*[•·▪▫‣⁃]\s*/gm, '') // Various bullet characters
+    .replace(/^[\s]*[-*+]\s*/gm, '')     // Dash/asterisk/plus bullets
+    .replace(/^[\s]*\d+\.\s*/gm, '')     // Numbered lists
+    
+    // Remove quotes
+    .replace(/^["'`]/g, '')   // Starting quotes
+    .replace(/["'`]$/g, '')   // Ending quotes
+    .replace(/["""''``]/g, '') // Smart quotes
+    
+    // Remove other markdown elements
+    .replace(/#{1,6}\s*/g, '')       // Headers
+    .replace(/`([^`]+)`/g, '$1')     // Inline code
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Links
+    
+    // Clean up whitespace
+    .replace(/\s+/g, ' ')     // Multiple spaces to single
+    .replace(/^\s+|\s+$/g, '') // Trim start/end
+    .trim();
 }
 
 // Generate persuasion text using LLM
@@ -745,8 +780,16 @@ ${brandStyling ? `BRAND GUIDANCE:
 Return only the persuasion text, no additional formatting or explanations.`;
 
     const persuasionResult = await multiAgentOrchestrator.specialists.persuasion.createPersuasiveContent(persuasionContext);
+    const persuasionText = persuasionResult.content || persuasionResult.text || `Limited time offers on premium ${category}! Save up to ${maxDiscount}% - shop now!`;
     
-    return persuasionResult.content || persuasionResult.text || `Limited time offers on premium ${category}! Save up to ${maxDiscount}% - shop now!`;
+    // Generate matching header copy
+    const headerResult = await multiAgentOrchestrator.specialists.persuasion.createHeaderCopy(persuasionContext, persuasionText, widgetType);
+    const headerCopy = headerResult.headerCopy || `${category} Deals`;
+    
+    return {
+      text: persuasionText,
+      header: headerCopy
+    };
 
   } catch (error) {
     console.error(`Error generating persuasion text:`, error);
@@ -754,25 +797,37 @@ Return only the persuasion text, no additional formatting or explanations.`;
     const hasDiscounts = productList.some(p => p.discount && p.discount > 0);
     const maxDiscount = hasDiscounts ? Math.max(...productList.map(p => p.discount || 0)) : 0;
     
-    // Generate brand-aware fallback text
+    // Generate brand-aware fallback text and header
+    let fallbackText, fallbackHeader;
+    
     if (brandStyling) {
       const isModernFont = ['Inter', 'Roboto', 'Montserrat', 'Poppins'].includes(brandStyling.fonts.primary);
       const isPlayfulFont = ['Comfortaa', 'Quicksand', 'Nunito'].includes(brandStyling.fonts.primary);
       
       if (isPlayfulFont) {
-        return hasDiscounts 
+        fallbackText = hasDiscounts 
           ? `🎉 Amazing ${category} deals! Save up to ${maxDiscount}% - grab yours now!`
           : `✨ Discover awesome ${category} at great prices! Shop the collection now!`;
+        fallbackHeader = hasDiscounts ? `Amazing ${category} Deals` : `Awesome ${category}`;
       } else if (isModernFont) {
-        return hasDiscounts 
+        fallbackText = hasDiscounts 
           ? `Premium ${category} on sale. Save up to ${maxDiscount}% - limited time.`
           : `Curated ${category} collection. Exceptional quality, competitive prices.`;
+        fallbackHeader = hasDiscounts ? `Premium Sale` : `Curated Collection`;
       }
     }
     
-    return hasDiscounts 
-      ? `Exclusive deals on ${category}! Save up to ${maxDiscount}% - limited time only!`
-      : `Discover premium ${category} at unbeatable prices. Shop now for the best selection!`;
+    if (!fallbackText) {
+      fallbackText = hasDiscounts 
+        ? `Exclusive deals on ${category}! Save up to ${maxDiscount}% - limited time only!`
+        : `Discover premium ${category} at unbeatable prices. Shop now for the best selection!`;
+      fallbackHeader = hasDiscounts ? `Exclusive Deals` : `Premium ${category}`;
+    }
+    
+    return {
+      text: fallbackText,
+      header: fallbackHeader
+    };
   }
 }
 
