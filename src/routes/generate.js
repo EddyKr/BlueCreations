@@ -251,21 +251,25 @@ router.get('/backoffice/campaigns', (req, res) => {
   }
 });
 
-// ===== FRONTEND ENDPOINT FOR USER RECOMMENDATION =====
+// ===== UNIFIED RECOMMENDATION ENDPOINT =====
 
-// Get personalized recommendation based on user data
-router.post('/frontend/get-recommendation', async (req, res) => {
+// Get recommendation based on campaign name and/or user profile
+router.post('/recommendation', async (req, res) => {
   try {
-    const { userProfile, context } = req.body;
+    const { 
+      campaignName,
+      userProfile,
+      context,
+      status = 'active'
+    } = req.body;
     
-    console.log('Frontend: Selecting recommendation for user...');
+    console.log('Unified: Getting recommendation with combined logic...');
     
-    // Get all active campaigns
-    const activeCampaigns = Array.from(savedCampaigns.values())
-      .filter(campaign => campaign.status === 'active');
+    // Get all campaigns with specified status
+    let campaigns = Array.from(savedCampaigns.values())
+      .filter(campaign => campaign.status === status);
     
-    if (activeCampaigns.length === 0) {
-      // No recommendations available - return empty as per requirement
+    if (campaigns.length === 0) {
       return res.json({
         success: true,
         recommendation: null,
@@ -273,23 +277,57 @@ router.post('/frontend/get-recommendation', async (req, res) => {
       });
     }
     
-    // Use selection agent to find best matching campaign
-    const selectedCampaign = await selectBestCampaignForUser(
-      activeCampaigns,
-      userProfile,
-      context
-    );
+    // First filter by campaign name if provided
+    if (campaignName) {
+      campaigns = campaigns.filter(c => 
+        c.name.toLowerCase().includes(campaignName.toLowerCase())
+      );
+      
+      if (campaigns.length === 0) {
+        return res.json({
+          success: true,
+          recommendation: null,
+          message: 'No recommendations match the campaign name criteria'
+        });
+      }
+    }
+    
+    let selectedCampaign = null;
+    let matchReason = 'Campaign match';
+    
+    // If user profile is provided, use profile-based selection from filtered campaigns
+    if (userProfile && Object.keys(userProfile).length > 0) {
+      selectedCampaign = await selectBestCampaignForUser(
+        campaigns,
+        userProfile,
+        context
+      );
+      
+      if (selectedCampaign) {
+        matchReason = selectedCampaign.matchReason || 'Profile match';
+      }
+    }
+    
+    // If no profile-based match or no profile provided, use most recent campaign
+    if (!selectedCampaign) {
+      campaigns.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      selectedCampaign = campaigns[0];
+      matchReason = campaignName ? 'Campaign name match' : 'Most recent campaign';
+    }
     
     if (!selectedCampaign) {
-      // No matching recommendation - return empty as per requirement
       return res.json({
         success: true,
         recommendation: null,
-        message: 'No matching recommendations for user profile'
+        message: 'No matching recommendations found'
       });
     }
     
-    // Return the selected recommendation
+    // Build match criteria for response
+    const matchCriteria = {};
+    if (campaignName) matchCriteria.campaignName = campaignName;
+    if (userProfile) matchCriteria.hasProfile = true;
+    
     res.json({
       success: true,
       recommendation: {
@@ -301,13 +339,16 @@ router.post('/frontend/get-recommendation', async (req, res) => {
         widgetType: selectedCampaign.variation.widgetType,
         category: selectedCampaign.category,
         products: selectedCampaign.products || [],
-        template: generateHtmlTemplate()
+        template: generateHtmlTemplate(),
+        createdAt: selectedCampaign.createdAt
       },
-      matchReason: selectedCampaign.matchReason || 'Profile match'
+      matchReason: matchReason,
+      matchCriteria: matchCriteria,
+      totalMatches: campaigns.length
     });
     
   } catch (error) {
-    console.error('Frontend recommendation error:', error);
+    console.error('Unified recommendation error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get recommendation',
@@ -316,62 +357,55 @@ router.post('/frontend/get-recommendation', async (req, res) => {
   }
 });
 
-// ===== CLIENT-SIDE ENDPOINT FOR QUERY-BASED RECOMMENDATION =====
+// ===== LEGACY ENDPOINTS (for backward compatibility) =====
 
-// Get recommendation based on query string parameters
+// Legacy frontend endpoint - redirects to unified endpoint
+router.post('/frontend/get-recommendation', async (req, res) => {
+  try {
+    const { userProfile, context } = req.body;
+    
+    // Call unified endpoint logic
+    const unifiedReq = {
+      body: {
+        userProfile,
+        context,
+        status: 'active'
+      }
+    };
+    
+    // Reuse the unified endpoint logic
+    return router.stack.find(layer => layer.route?.path === '/recommendation')
+      .route.stack[0].handle(unifiedReq, res);
+      
+  } catch (error) {
+    console.error('Legacy frontend recommendation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get recommendation',
+      details: error.message
+    });
+  }
+});
+
+// Legacy client endpoint - supports both GET and POST for backward compatibility
 router.get('/client/recommendation', (req, res) => {
   try {
-    const { 
-      campaignName,
-      status = 'active'
-    } = req.query;
+    const { campaignName, status = 'active' } = req.query;
     
-    console.log('Client: Retrieving recommendation by query parameters...');
+    // Convert GET request to unified POST format
+    const unifiedReq = {
+      body: {
+        campaignName,
+        status
+      }
+    };
     
-    // Get all campaigns with specified status
-    let campaigns = Array.from(savedCampaigns.values())
-      .filter(campaign => campaign.status === status);
-    
-    if (campaigns.length === 0) {
-      return res.json({
-        success: true,
-        recommendation: null,
-        message: 'No active recommendations available'
-      });
-    }
-    
-    // Filter by campaign name if provided
-    if (campaignName) {
-      campaigns = campaigns.filter(c => 
-        c.name.toLowerCase().includes(campaignName.toLowerCase())
-      );
-    }
-
-    if (campaigns.length === 0) {
-      return res.json({
-        success: true,
-        recommendation: null,
-        message: 'No recommendations match the query criteria'
-      });
-    }
-    
-    // Sort by creation date and return the most recent match
-    campaigns.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const selectedCampaign = campaigns[0];
-    
-    // Build match criteria for response
-    const matchCriteria = {};
-    if (campaignName) matchCriteria.campaignName = campaignName;
-    
-    res.json({
-      success: true,
-      recommendation: formatRecommendationResponse(selectedCampaign),
-      matchCriteria: matchCriteria,
-      totalMatches: campaigns.length
-    });
-    
+    // Reuse the unified endpoint logic
+    return router.stack.find(layer => layer.route?.path === '/recommendation')
+      .route.stack[0].handle(unifiedReq, res);
+      
   } catch (error) {
-    console.error('Client recommendation error:', error);
+    console.error('Legacy client recommendation error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get recommendation',
