@@ -134,7 +134,7 @@ RESPONSE STYLE:
       const personasPath = path.join(__dirname, '../data/personas.json');
       const personasData = fs.readFileSync(personasPath, 'utf8');
       const personas = JSON.parse(personasData);
-      return personas.userProfiles || [];
+      return personas || [];
     } catch (error) {
       console.error('Error loading user profiles:', error);
       return [];
@@ -227,9 +227,85 @@ RESPONSE STYLE:
 
   // Helper method to get property values from user profile
   getPropertyValues(userProfile, propertyId) {
-    if (!userProfile.properties) return [];
-    const property = userProfile.properties.find(prop => prop.id === propertyId);
-    return property ? property.values : [];
+    if (!userProfile) return [];
+    
+    // Handle new flat persona format
+    switch (propertyId) {
+      case 'name':
+        return userProfile.Name ? [userProfile.Name] : [];
+      
+      case 'sport_interests':
+        const sports = [];
+        if (userProfile['Primary Sport']) {
+          sports.push(userProfile['Primary Sport'].toLowerCase());
+        }
+        // Parse additional interests for sports
+        if (userProfile.Interests) {
+          const interests = userProfile.Interests.toLowerCase();
+          const sportKeywords = ['running', 'golf', 'basketball', 'yoga', 'soccer', 'football', 'tennis', 'swimming', 'cycling', 'hiking', 'fitness'];
+          sportKeywords.forEach(sport => {
+            if (interests.includes(sport) && !sports.includes(sport)) {
+              sports.push(sport);
+            }
+          });
+        }
+        return sports;
+      
+      case 'budget_range':
+        if (userProfile['Average Spend']) {
+          const spend = userProfile['Average Spend'];
+          if (spend < 100) return ['budget'];
+          else if (spend < 200) return ['moderate'];
+          else if (spend < 400) return ['premium'];
+          else return ['luxury'];
+        }
+        return ['moderate']; // default
+      
+      case 'skill_level':
+        if (userProfile['Activity Level']) {
+          const level = userProfile['Activity Level'].toLowerCase();
+          if (level === 'low') return ['recreational'];
+          else if (level === 'medium') return ['intermediate'];
+          else if (level === 'high') return ['advanced'];
+        }
+        return ['intermediate']; // default
+      
+      case 'preferred_brands':
+        const brands = [];
+        if (userProfile['Past Purchase History']) {
+          const history = userProfile['Past Purchase History'].toLowerCase();
+          const brandKeywords = ['nike', 'adidas', 'under armour', 'puma', 'reebok', 'jordan', 'titleman', 'apple'];
+          brandKeywords.forEach(brand => {
+            if (history.includes(brand) && !brands.includes(brand)) {
+              brands.push(brand);
+            }
+          });
+        }
+        return brands;
+      
+      case 'location':
+        return userProfile.Location ? [userProfile.Location] : [];
+      
+      case 'age':
+        return userProfile.Age ? [userProfile.Age.toString()] : [];
+      
+      case 'gender':
+        return userProfile.Gender ? [userProfile.Gender] : [];
+      
+      case 'campaign_objective':
+        return userProfile['Campaign Objective Alignment'] ? [userProfile['Campaign Objective Alignment']] : [];
+      
+      case 'preferred_categories':
+        return userProfile['Preferred Categories'] ? [userProfile['Preferred Categories']] : [];
+      
+      default:
+        // Fallback to legacy format for backward compatibility
+        if (userProfile.properties) {
+          const property = userProfile.properties.find(prop => prop.id === propertyId);
+          return property ? property.values : [];
+        }
+        return [];
+    }
   }
 
   // Format product recommendations for display
@@ -266,7 +342,10 @@ RESPONSE STYLE:
     if (!profileId) return null;
     
     const userProfiles = this.loadUserProfiles();
-    return userProfiles.find(profile => profile.id === profileId) || null;
+    // Handle both old format (id) and new format (profileId)
+    return userProfiles.find(profile => 
+      profile.id === profileId || profile.profileId === profileId
+    ) || null;
   }
 
   // Format user profile for agents
@@ -274,14 +353,62 @@ RESPONSE STYLE:
     if (!userProfile) return '';
     
     let profileInfo = '\n--- USER PROFILE CONTEXT ---\n';
-    profileInfo += `User ID: ${userProfile.id}\n`;
-    profileInfo += `Permission Level: ${userProfile.permissions?.level || 'Unknown'}\n`;
     
+    // Handle both old format (with id) and new format (with profileId)
+    const userId = userProfile.id || userProfile.profileId;
+    if (userId) {
+      profileInfo += `User ID: ${userId}\n`;
+    }
+    
+    // New format - flat properties
+    if (userProfile.Name) {
+      profileInfo += `Name: ${userProfile.Name}\n`;
+    }
+    if (userProfile.Gender) {
+      profileInfo += `Gender: ${userProfile.Gender}\n`;
+    }
+    if (userProfile.Age) {
+      profileInfo += `Age: ${userProfile.Age}\n`;
+    }
+    if (userProfile.Location) {
+      profileInfo += `Location: ${userProfile.Location}\n`;
+    }
+    if (userProfile['Activity Level']) {
+      profileInfo += `Activity Level: ${userProfile['Activity Level']}\n`;
+    }
+    if (userProfile['Primary Sport']) {
+      profileInfo += `Primary Sport: ${userProfile['Primary Sport']}\n`;
+    }
+    if (userProfile.Interests) {
+      profileInfo += `Interests: ${userProfile.Interests}\n`;
+    }
+    if (userProfile['Past Purchase History']) {
+      profileInfo += `Past Purchase History: ${userProfile['Past Purchase History']}\n`;
+    }
+    if (userProfile['Preferred Categories']) {
+      profileInfo += `Preferred Categories: ${userProfile['Preferred Categories']}\n`;
+    }
+    if (userProfile['Average Spend']) {
+      profileInfo += `Average Spend: $${userProfile['Average Spend']}\n`;
+    }
+    if (userProfile['Campaign Objective Alignment']) {
+      profileInfo += `Campaign Objective Alignment: ${userProfile['Campaign Objective Alignment']}\n`;
+    }
+    if (userProfile['Product Preference Notes']) {
+      profileInfo += `Product Preference Notes: ${userProfile['Product Preference Notes']}\n`;
+    }
+    
+    // Legacy format support - nested properties structure
     if (userProfile.properties) {
       profileInfo += 'User Properties:\n';
       userProfile.properties.forEach(prop => {
         profileInfo += `- ${prop.id}: ${prop.values.join(', ')}\n`;
       });
+    }
+    
+    // Legacy format support - segments, permissions, objectives
+    if (userProfile.permissions?.level) {
+      profileInfo += `Permission Level: ${userProfile.permissions.level}\n`;
     }
     
     if (userProfile.segments && userProfile.segments.length > 0) {

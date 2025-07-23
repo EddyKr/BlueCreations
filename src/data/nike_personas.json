@@ -1,6 +1,6 @@
 [
   {
-    "profileId":"P001",
+    "Persona ID":"P001",
     "Name":"Jake Thompson",
     "Gender":"Male",
     "Age":32,
@@ -15,7 +15,7 @@
     "Product Preference Notes":"Only show Titleman golf products, exclude competing brands"
   },
   {
-    "profileId":"P002",
+    "Persona ID":"P002",
     "Name":"Sarah Kim",
     "Gender":"Female",
     "Age":27,
@@ -30,7 +30,7 @@
     "Product Preference Notes":"Prefers performance footwear and matching apparel"
   },
   {
-    "profileId":"P003",
+    "Persona ID":"P003",
     "Name":"Anthony Rivera",
     "Gender":"Male",
     "Age":21,
@@ -45,7 +45,7 @@
     "Product Preference Notes":"Highly responsive to limited releases and colorways"
   },
   {
-    "profileId":"P004",
+    "Persona ID":"P004",
     "Name":"Lisa Chen",
     "Gender":"Female",
     "Age":35,
@@ -60,7 +60,7 @@
     "Product Preference Notes":"Tends to buy complete outfits with accessories"
   },
   {
-    "profileId":"P005",
+    "Persona ID":"P005",
     "Name":"Mike Patel",
     "Gender":"Male",
     "Age":29,
@@ -75,7 +75,7 @@
     "Product Preference Notes":"React well to curated 'looks' rather than single items"
   },
   {
-    "profileId":"P006",
+    "Persona ID":"P006",
     "Name":"Rachel Simmons",
     "Gender":"Female",
     "Age":24,
@@ -90,7 +90,7 @@
     "Product Preference Notes":"Best targeted with bundle options like gear + tech"
   },
   {
-    "profileId":"P007",
+    "Persona ID":"P007",
     "Name":"Daniel Park",
     "Gender":"Male",
     "Age":38,
@@ -105,7 +105,7 @@
     "Product Preference Notes":"Showcase premium Titleman gear only, ignore general golf items"
   },
   {
-    "profileId":"P008",
+    "Persona ID":"P008",
     "Name":"Ashley Lopez",
     "Gender":"Female",
     "Age":30,
@@ -120,7 +120,7 @@
     "Product Preference Notes":"Responds well to influencer-curated collections"
   },
   {
-    "profileId":"P009",
+    "Persona ID":"P009",
     "Name":"Trevor Banks",
     "Gender":"Male",
     "Age":26,
@@ -135,7 +135,7 @@
     "Product Preference Notes":"Promotions on matching team kits and cleats work well"
   },
   {
-    "profileId":"P010",
+    "Persona ID":"P010",
     "Name":"Emily Rhodes",
     "Gender":"Female",
     "Age":41,
