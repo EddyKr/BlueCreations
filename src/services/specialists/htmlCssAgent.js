@@ -7,22 +7,6 @@ class HtmlCssAgent {
       role: "UI/UX Conversion Specialist",
       systemPrompt: `NIKE-INSPIRED DESIGN SYSTEM:
 
-PRODUCT CARDS:
-- Image above all the text
-- Product Title: 20-28px font size, 600-800 font weight, sans-serif, dark text (#111 or #000)
-- Product Description: 16-20px font size, 300-500 font weight, sans-serif, MUST BE VISIBLE - use dark gray (#333 or #555) for readability
-- Price: 20-28px font size, 600-800 font weight, sans-serif, dark text (#111 or #000)
-- Button: 0-50px border radius, black/white high contrast
-- Button Text: 600-800 font weight, uppercase preferred
-- Layout: Clean grid, minimal gaps, high impact visuals
-- Background: Light backgrounds (#FFF, #F5F5F5, #FAFAFA) with dark text for contrast
-
-BANNER DESIGN:
-- Header: 32-48px, "Work Sans" font, 600-800 weight, 8 words max
-- Body: 16-20px, "Work Sans" font, 200-500 weight, 20 words max
-- Style: Bold, motivational, athletic aesthetic
-- Layout: Full-width, high contrast, minimal design
-
 GENERAL PRINCIPLES:
 - Bold, athletic, performance-focused aesthetic
 - High contrast black/white color scheme
@@ -30,6 +14,9 @@ GENERAL PRINCIPLES:
 - Mobile-first responsive approach
 - Clean typography with strong hierarchy
 - Full-width layouts with edge-to-edge imagery
+- Use flexbox for product cards with flex-direction: column
+- Product content should use flex: 1 with display: flex and flex-direction: column
+- Buttons must be in a separate product-action div at the bottom
 
 COMMUNICATION STYLE:
 - Provide complete HTML/CSS code
@@ -40,12 +27,16 @@ COMMUNICATION STYLE:
 
 HTML STRUCTURE:
 <div class="product-card">
-  <div class="product-image" style="background-image: url('https://via.placeholder.com/300');"></div>
+  <div class="product-image" style="background-image: url('[USE ACTUAL PRODUCT IMAGE URL]');"></div>
   <div class="product-content">
-    <h2 class="product-title">Pro Driver X1</h2>
-    <p class="product-price">$404.99</p>
-    <p class="product-description">Advanced titanium driver with aerodynamic head design for maximum distance and forgiveness.</p>
-    <a href="#" class="product-button">Buy Now</a>
+    <div class="product-info">
+      <h2 class="product-title">[PRODUCT NAME]</h2>
+      <p class="product-price">$[PRODUCT PRICE]</p>
+      <p class="product-description">[PRODUCT DESCRIPTION]</p>
+    </div>
+    <div class="product-action">
+      <a href="#" class="product-button">Buy Now</a>
+    </div>
   </div>
 </div>
 `,
@@ -62,9 +53,20 @@ HTML STRUCTURE:
     productList,
     additionalPrompt = "",
     widgetType = "product_cards",
-    brandStyling = null
+    brandStyling = null,
+    variation = 1
   ) {
     try {
+      // Include product details in the prompt
+      const productDetails = productList.map((product, index) => ({
+        name: product.name,
+        price: product.price,
+        description: product.description,
+        image: product.image,
+        discount: product.discount,
+        brand: product.brand
+      }));
+
       const prompt = {
         system:
           this.personality.systemPrompt +
@@ -74,19 +76,42 @@ FOCUS: Generate complete, embeddable HTML/CSS recommendation widgets that can be
 
 WIDGET TYPE: ${widgetType}
 
-${brandStyling ? `BRAND STYLING (use these for styling):
-COLORS:
-- Primary: ${brandStyling.colors.primary}
-- Secondary: ${brandStyling.colors.secondary}
-- Accent: ${brandStyling.colors.accent}
-- Text: ${brandStyling.colors.text}
-- Background: ${brandStyling.colors.background}
+PRODUCT DATA:
+${productDetails.map((p, i) => `
+Product ${i + 1}:
+- Name: ${p.name}
+- Price: $${p.price}
+- Description: ${p.description}
+- Image URL: ${p.image}
+- Brand: ${p.brand}
+- Discount: ${p.discount}%
+`).join('')}
+
+USE THE ACTUAL PRODUCT IMAGE URLs PROVIDED ABOVE, NOT PLACEHOLDER IMAGES!
+
+${brandStyling ? `
+
+  PRODUCT CARDS:
+- Image above all the text
+- Product Title: 20-28px font size, 600-800 font weight, sans-serif, dark text (#111 or #000)
+- Product Description: 16-20px font size, 300-500 font weight, sans-serif, MUST BE VISIBLE - use dark gray (#333 or #555) for readability
+- Price: 20-28px font size, 600-800 font weight, sans-serif, dark text (#111 or #000)
+- Button: 0-50px border radius, black/white high contrast, FULL WIDTH (width: 100%)
+- Button Text: 600-800 font weight, uppercase preferred
+- Layout: Clean grid, minimal gaps, high impact visuals
+- Background: Light backgrounds (#FFF, #F5F5F5, #FAFAFA) with dark text for contrast
 
 IMPORTANT: 
 1. Include Google Fonts import in your CSS: @import url('https://fonts.googleapis.com/css2?family=${brandStyling.fonts.primary.replace(' ', '+')}:wght@400;500;600;700&family=${brandStyling.fonts.secondary.replace(' ', '+')}:wght@300;400;500&display=swap');
 2. Use these brand colors and fonts throughout the design for consistency with the brand identity.
 3. Apply font-family: '${brandStyling.fonts.primary}', ${brandStyling.fonts.fallback}; to headings and CTAs
 4. Apply font-family: '${brandStyling.fonts.secondary}', ${brandStyling.fonts.fallback}; to body text and descriptions` : ""}
+5. - Product Title: 20-28px font size, 600-800 font weight, sans-serif, dark text (#111 or #000)
+- Product Description: 16-20px font size, 300-500 font weight, sans-serif, MUST BE VISIBLE - use dark gray (#333 or #555) for readability
+- Price: 20-28px font size, 600-800 font weight, sans-serif, dark text (#111 or #000)
+- Button: 0-50px border radius, black/white high contrast, FULL WIDTH (width: 100%)
+- Button Text: 600-800 font weight, uppercase preferred
+6. Postfix css classes with the variation number: ${variation}
 
 ${additionalPrompt ? `ADDITIONAL REQUIREMENTS: ${additionalPrompt}` : ""}
 
@@ -105,6 +130,12 @@ Generate a complete, embeddable HTML/CSS recommendation widget that:
 11. ${brandStyling ? 'Includes Google Fonts imports at the top of the CSS' : 'Uses web-safe fonts'}
 12. Optimizes the layout specifically for 3-product display (not more)
 13. Generate a template for the widget that can be used to generate the widget for the product list
+14. CRITICAL: Buttons must be aligned at the bottom of each card regardless of content length. Use flexbox layout:
+    - .product-card { display: flex; flex-direction: column; height: 100%; }
+    - .product-content { flex: 1; display: flex; flex-direction: column; }
+    - .product-info { flex: 1; } to push buttons to bottom
+    - .product-action { /* button container at bottom */ }
+    - .cta-button, .product-button { width: 100%; display: block; }
 
 Return ONLY the complete HTML/CSS code (including <style> tags) that can be embedded. No explanations outside the code.`,
       };
@@ -114,7 +145,7 @@ Return ONLY the complete HTML/CSS code (including <style> tags) that can be embe
         maxTokens: openaiService.getTokenLimits().EXTENDED,
         temperature: 0.2,
       });
-      console.error(response);
+
       // Clean up the response to ensure it's pure HTML/CSS
       const cleanedCode = this.cleanWidgetCode(response);
 

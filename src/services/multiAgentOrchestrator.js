@@ -147,7 +147,17 @@ RESPONSE STYLE:
       const productsPath = path.join(__dirname, '../data/products.json');
       const productsData = fs.readFileSync(productsPath, 'utf8');
       const products = JSON.parse(productsData);
-      return products.products || [];
+      // Map Nike product data to our expected format
+      return products.map(product => ({
+        id: product.productCode,
+        name: product.copy.title,
+        brand: 'Nike',
+        price: product.prices.currentPrice,
+        category: product.productType === 'FOOTWEAR' ? 'Footwear' : product.productType,
+        description: product.copy.subTitle,
+        discount: product.prices.discountPercentage,
+        image: product.colorwayImages.portraitURL
+      }));
     } catch (error) {
       console.error('Error loading products:', error);
       return [];

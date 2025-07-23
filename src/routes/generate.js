@@ -61,14 +61,14 @@ router.post('/backoffice/generate', async (req, res) => {
       }
     }
 
-    // Limit to maximum 3 products for widget display
-    productList = productList.slice(0, 3);
+    // Randomly select 3 products for widget display
+    productList = getRandomProducts(productList, 3);
 
-    // Generate 3 different variations
+    // Generate 3 different variations with different styles
     const variations = await Promise.all([
-      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt, brandStyling),
-      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt, brandStyling),
-      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt, brandStyling)
+      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt, brandStyling, 1, 'minimal'),
+      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt, brandStyling, 2, 'bold'),
+      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt, brandStyling, 3, 'premium')
     ]);
 
     // Format response
@@ -397,6 +397,26 @@ function formatRecommendationResponse(campaign) {
 
 // ===== HELPER FUNCTIONS =====
 
+// Randomly select n items from an array
+function getRandomProducts(products, count) {
+  // If we have fewer products than requested, return all products
+  if (products.length <= count) {
+    return products;
+  }
+  
+  // Create a copy of the array to avoid mutating the original
+  const shuffled = [...products];
+  
+  // Fisher-Yates shuffle algorithm
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  // Return the first 'count' items from the shuffled array
+  return shuffled.slice(0, count);
+}
+
 // Get brand colors and fonts using OpenAI
 async function getBrandStyling(brandName) {
   try {
@@ -585,18 +605,28 @@ async function selectBestCampaignForUser(campaigns, userProfile, context) {
 }
 
 // Generate HTML/CSS variation with persuasion text
-async function generateHtmlCssVariation(widgetType, campaignObjective, productList, additionalPrompt, brandStyling = null) {
+async function generateHtmlCssVariation(widgetType, campaignObjective, productList, additionalPrompt, brandStyling = null, variation = 1, style = 'standard') {
   try {
+    // Add style-specific instructions to the prompt
+    const stylePrompts = {
+      minimal: 'Create a MINIMAL, clean design with lots of whitespace, subtle borders, and understated elegance. Use thin fonts, light colors, and simple layouts.',
+      bold: 'Create a BOLD, high-impact design with strong contrasts, thick borders, large fonts, and eye-catching elements. Use dark backgrounds with bright accents.',
+      premium: 'Create a PREMIUM, luxurious design with rich colors, elegant typography, subtle animations, and sophisticated layouts. Use gold accents and premium feel.'
+    };
+    
+    const enhancedPrompt = `${additionalPrompt || ''} ${stylePrompts[style] || ''}`;
+    
     // Generate persuasion text using LLM with brand styling
-    const persuasionText = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, brandStyling);
+    const persuasionText = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, enhancedPrompt, brandStyling);
 
-    // Generate HTML/CSS widget using the htmlCssAgent with brand styling
+    // Generate HTML/CSS widget using the htmlCssAgent with brand styling and style variation
     const htmlCssResult = await multiAgentOrchestrator.specialists.htmlCss.generateRecommendationWidget(
       campaignObjective,
       productList,
-      additionalPrompt || '',
+      enhancedPrompt,
       widgetType,
-      brandStyling
+      brandStyling,
+      variation
     );
 
     // Extract HTML and CSS from the widget code
@@ -618,7 +648,7 @@ async function generateHtmlCssVariation(widgetType, campaignObjective, productLi
     return {
       widgetType: widgetType,
       html: generateFallbackHtml(widgetType, productList),
-      css: generateFallbackCss(widgetType, brandStyling),
+      css: generateFallbackCss(widgetType, brandStyling, style),
       text: fallbackPersuasionText
     };
   }
@@ -741,13 +771,17 @@ function generateHtmlTemplate() {
   return `
 <div class="product-card-container">
   <div class="product-card">
-    <div class="product-image" style="background-image: url('https://via.placeholder.com/150')"></div>
-    <div class="product-info">
-      <h2 class="product-name">{{productName}}</h2>
-      <p class="product-brand">{{brand}}</p>
-      <p class="product-description">{{description}}</p>
-      <p class="product-price">{{price}} <span class="product-discount">{{discount}} OFF</span></p>
-      <button class="cta-button">{{buttonText}}</button>
+    <div class="product-image" style="background-image: url('{{productImage}}')"></div>
+    <div class="product-content">
+      <div class="product-info">
+        <h2 class="product-name">{{productName}}</h2>
+        <p class="product-brand">{{brand}}</p>
+        <p class="product-description">{{description}}</p>
+        <p class="product-price">{{price}} <span class="product-discount">{{discount}} OFF</span></p>
+      </div>
+      <div class="product-action">
+        <button class="cta-button">{{buttonText}}</button>
+      </div>
     </div>
   </div>
   <!-- Repeat similar blocks for each product -->
@@ -761,20 +795,24 @@ function generateFallbackHtml(widgetType, productList) {
 <div class="product-card-container">
   ${products.map(product => `
   <div class="product-card">
-    <div class="product-image" style="background-image: url('https://via.placeholder.com/150')"></div>
-    <div class="product-info">
-      <h2 class="product-name">${product.name}</h2>
-      <p class="product-brand">${product.brand}</p>
-      <p class="product-description">${product.description || 'Premium quality product'}</p>
-      <p class="product-price">$${product.price} ${product.discount ? `<span class="product-discount">${product.discount}% OFF</span>` : ''}</p>
-      <button class="cta-button">Add to Cart</button>
+    <div class="product-image" style="background-image: url('${product.image || 'https://via.placeholder.com/150'}')"></div>
+    <div class="product-content">
+      <div class="product-info">
+        <h2 class="product-name">${product.name}</h2>
+        <p class="product-brand">${product.brand}</p>
+        <p class="product-description">${product.description || 'Premium quality product'}</p>
+        <p class="product-price">$${product.price} ${product.discount ? `<span class="product-discount">${product.discount}% OFF</span>` : ''}</p>
+      </div>
+      <div class="product-action">
+        <button class="cta-button">Add to Cart</button>
+      </div>
     </div>
   </div>`).join('')}
 </div>`;
 }
 
 // Fallback CSS generator  
-function generateFallbackCss(widgetType, brandStyling = null) {
+function generateFallbackCss(widgetType, brandStyling = null, style = 'standard') {
   // Use brand styling if available, otherwise default styling
   const colors = brandStyling?.colors || {
     primary: '#007bff',
@@ -790,17 +828,60 @@ function generateFallbackCss(widgetType, brandStyling = null) {
     fallback: 'sans-serif'
   };
 
+  // Style-specific customizations
+  const styleConfigs = {
+    minimal: {
+      borderRadius: '2px',
+      borderWidth: '1px',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+      hoverShadow: '0 2px 6px rgba(0,0,0,0.08)',
+      gap: '2rem',
+      padding: '2rem',
+      titleSize: '1.1rem',
+      fontWeight: '400',
+      buttonPadding: '10px 20px',
+      background: '#fafafa'
+    },
+    bold: {
+      borderRadius: '0px',
+      borderWidth: '3px',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+      hoverShadow: '0 8px 24px rgba(0,0,0,0.3)',
+      gap: '1rem',
+      padding: '1rem',
+      titleSize: '1.5rem',
+      fontWeight: '800',
+      buttonPadding: '16px 32px',
+      background: '#000000'
+    },
+    premium: {
+      borderRadius: '16px',
+      borderWidth: '1px',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+      hoverShadow: '0 12px 48px rgba(0,0,0,0.15)',
+      gap: '1.5rem',
+      padding: '1.5rem',
+      titleSize: '1.3rem',
+      fontWeight: '600',
+      buttonPadding: '14px 28px',
+      background: 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)'
+    }
+  };
+
+  const config = styleConfigs[style] || styleConfigs.minimal;
+
   // Generate Google Fonts import URL
-  const fontImports = `@import url('https://fonts.googleapis.com/css2?family=${fonts.primary.replace(' ', '+')}:wght@400;500;600;700&family=${fonts.secondary.replace(' ', '+')}:wght@300;400;500&display=swap');`;
+  const fontImports = `@import url('https://fonts.googleapis.com/css2?family=${fonts.primary.replace(' ', '+')}:wght@400;500;600;700;800&family=${fonts.secondary.replace(' ', '+')}:wght@300;400;500&display=swap');`;
   
   return `${fontImports}
 
 .product-card-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-  padding: 1.5rem;
-  background: ${colors.background};
+  gap: ${config.gap};
+  padding: ${config.padding};
+  background: ${style === 'bold' ? config.background : colors.background};
+  align-items: stretch;
 }
 @media (max-width: 768px) {
   .product-card-container {
@@ -813,16 +894,19 @@ function generateFallbackCss(widgetType, brandStyling = null) {
   }
 }
 .product-card {
-  border: 1px solid ${colors.secondary};
-  border-radius: 12px;
+  border: ${config.borderWidth} solid ${style === 'bold' ? colors.primary : colors.secondary};
+  border-radius: ${config.borderRadius};
   overflow: hidden;
-  background: ${colors.background};
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  transition: transform 0.2s ease;
+  background: ${style === 'bold' ? '#111' : colors.background};
+  box-shadow: ${config.boxShadow};
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 .product-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  box-shadow: ${config.hoverShadow};
   border-color: ${colors.primary};
 }
 .product-image {
@@ -833,37 +917,46 @@ function generateFallbackCss(widgetType, brandStyling = null) {
   background-repeat: no-repeat;
   border-bottom: 2px solid ${colors.primary};
 }
+.product-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 .product-info {
-  padding: 1.25rem;
+  flex: 1;
+  padding: 1.25rem 1.25rem 0.5rem 1.25rem;
+}
+.product-action {
+  padding: 0 1.25rem 1.25rem 1.25rem;
 }
 .product-name {
   font-family: '${fonts.primary}', ${fonts.fallback};
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: ${config.titleSize};
+  font-weight: ${config.fontWeight};
   margin: 0 0 0.5rem 0;
-  color: ${colors.text};
+  color: ${style === 'bold' ? colors.background : colors.text};
 }
 .product-brand {
   font-family: '${fonts.secondary}', ${fonts.fallback};
-  font-size: 0.9rem;
-  color: ${colors.secondary};
+  font-size: ${style === 'bold' ? '1rem' : '0.9rem'};
+  color: ${style === 'bold' ? colors.accent : colors.secondary};
   margin: 0 0 0.75rem 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: ${style === 'premium' ? '1px' : '0.5px'};
 }
 .product-description {
   font-family: '${fonts.secondary}', ${fonts.fallback};
-  font-size: 0.9rem;
-  color: ${colors.secondary};
+  font-size: ${style === 'minimal' ? '0.85rem' : '0.9rem'};
+  color: ${style === 'bold' ? '#ccc' : colors.secondary};
   margin: 0 0 1rem 0;
-  line-height: 1.4;
+  line-height: ${style === 'premium' ? '1.6' : '1.4'};
 }
 .product-price {
   font-family: '${fonts.primary}', ${fonts.fallback};
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: ${colors.text};
-  margin: 0 0 1.25rem 0;
+  font-size: ${style === 'bold' ? '1.3rem' : '1.1rem'};
+  font-weight: ${style === 'minimal' ? '500' : '700'};
+  color: ${style === 'bold' ? colors.primary : colors.text};
+  margin: 0 0 0.5rem 0;
 }
 .product-discount {
   font-family: '${fonts.secondary}', ${fonts.fallback};
@@ -877,20 +970,38 @@ function generateFallbackCss(widgetType, brandStyling = null) {
 }
 .cta-button {
   font-family: '${fonts.primary}', ${fonts.fallback};
-  background: ${colors.primary};
-  color: ${colors.background};
-  border: none;
-  padding: 12px 24px;
-  border-radius: 6px;
-  font-weight: 600;
+  background: ${style === 'minimal' ? 'transparent' : colors.primary};
+  color: ${style === 'minimal' ? colors.primary : colors.background};
+  border: ${style === 'minimal' ? `2px solid ${colors.primary}` : 'none'};
+  padding: ${config.buttonPadding};
+  border-radius: ${style === 'bold' ? '0' : style === 'premium' ? '50px' : '4px'};
+  font-weight: ${style === 'bold' ? '800' : '600'};
   cursor: pointer;
   width: 100%;
-  transition: background-color 0.2s ease;
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  text-transform: ${style === 'bold' ? 'uppercase' : 'none'};
+  letter-spacing: ${style === 'bold' ? '1px' : '0'};
 }
 .cta-button:hover {
-  background: ${colors.accent};
-  transform: translateY(-1px);
-}`;
+  background: ${style === 'minimal' ? colors.primary : colors.accent};
+  color: ${style === 'minimal' ? colors.background : colors.background};
+  transform: ${style === 'premium' ? 'scale(1.05)' : 'translateY(-1px)'};
+  box-shadow: ${style === 'premium' ? '0 8px 24px rgba(0,0,0,0.2)' : 'none'};
+}
+${style === 'premium' ? `
+.product-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, ${colors.accent} 0%, transparent 100%);
+  opacity: 0.3;
+}` : ''}`;
 }
 
 module.exports = router; 
