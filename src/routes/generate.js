@@ -169,6 +169,7 @@ router.post('/backoffice/save-campaign', async (req, res) => {
         css: variation.css,
         text: variation.text
       },
+      template: generateHtmlTemplate(),
       status: 'active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -803,24 +804,27 @@ function extractHtmlAndCss(widgetCode) {
 }
 
 function generateHtmlTemplate() {
-  return `
-<div class="product-card-container">
-  <div class="product-card">
-    <div class="product-image" style="background-image: url('{{productImage}}')"></div>
-    <div class="product-content">
-      <div class="product-info">
-        <h2 class="product-name">{{productName}}</h2>
-        <p class="product-brand">{{brand}}</p>
-        <p class="product-description">{{description}}</p>
-        <p class="product-price">{{price}} <span class="product-discount">{{discount}} OFF</span></p>
+  return {
+    // Template for dynamic product injection
+    productCardTemplate: `
+    <div class="product-card">
+      <div class="product-image" style="background-image: url('{{productImage}}')"></div>
+      <div class="product-content">
+        <div class="product-info">
+          <h2 class="product-name">{{productName}}</h2>
+          <p class="product-brand">{{brand}}</p>
+          <p class="product-description">{{description}}</p>
+          <p class="product-price">\${{price}} {{#if discount}}<span class="product-discount">{{discount}}% OFF</span>{{/if}}</p>
+        </div>
+        <div class="product-action">
+          <button class="cta-button" onclick="{{clickAction}}">{{buttonText}}</button>
+        </div>
       </div>
-      <div class="product-action">
-        <button class="cta-button">{{buttonText}}</button>
-      </div>
-    </div>
-  </div>
-  <!-- Repeat similar blocks for each product -->
-</div>`
+    </div>`,
+    
+    // Container template
+    containerTemplate: `<div class="product-card-container">{{productCards}}</div>`
+   };
 }
 // Fallback HTML generator
 function generateFallbackHtml(widgetType, productList) {
