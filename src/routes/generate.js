@@ -1,5 +1,5 @@
-const express = require('express');
-const multiAgentOrchestrator = require('../services/multiAgentOrchestrator');
+const express = require("express");
+const multiAgentOrchestrator = require("../services/multiAgentOrchestrator");
 
 const router = express.Router();
 
@@ -9,19 +9,20 @@ const savedCampaigns = new Map(); // key: campaign name, value: campaign data
 // ===== BACK OFFICE ENDPOINTS FOR MARKETERS =====
 
 // Generate 3 recommendation variations for marketers
-router.post('/backoffice/generate', async (req, res) => {
+router.post("/backoffice/generate", async (req, res) => {
   try {
-    const { campaignObjective, additionalPrompt, category, brandName } = req.body;
-    
+    const { campaignObjective, additionalPrompt, category, brandName } =
+      req.body;
+
     // Validate required fields
     if (!campaignObjective?.trim()) {
       return res.status(400).json({
         success: false,
-        error: 'Campaign objective is required'
+        error: "Campaign objective is required",
       });
     }
 
-    console.log('Back office: Generating 3 variations for marketer...');
+    console.log("Back office: Generating 3 variations for marketer...");
 
     // Get brand colors and fonts if brand name is provided
     let brandStyling = null;
@@ -30,33 +31,33 @@ router.post('/backoffice/generate', async (req, res) => {
         brandStyling = await getBrandStyling(brandName.trim());
         console.log(`Brand styling for ${brandName}:`, brandStyling);
       } catch (error) {
-        console.error('Error getting brand styling:', error);
+        console.error("Error getting brand styling:", error);
         // Continue without brand styling if there's an error
       }
     }
 
     // Load products from data folder
     const allProducts = multiAgentOrchestrator.loadProducts();
-    
+
     if (!allProducts || allProducts.length === 0) {
       return res.status(500).json({
         success: false,
-        error: 'No products available in the system'
+        error: "No products available in the system",
       });
     }
 
     // Filter products by category if specified
     let productList = allProducts;
     if (category && category.trim()) {
-      productList = allProducts.filter(product => 
-        product.category.toLowerCase() === category.toLowerCase()
+      productList = allProducts.filter(
+        (product) => product.category.toLowerCase() === category.toLowerCase()
       );
-      
+
       if (productList.length === 0) {
         return res.status(400).json({
           success: false,
           error: `No products found for category: ${category}`,
-          availableCategories: [...new Set(allProducts.map(p => p.category))]
+          availableCategories: [...new Set(allProducts.map((p) => p.category))],
         });
       }
     }
@@ -66,9 +67,33 @@ router.post('/backoffice/generate', async (req, res) => {
 
     // Generate 3 different variations with different styles
     const variations = await Promise.all([
-      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt, brandStyling, 1, 'minimal'),
-      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt, brandStyling, 2, 'bold'),
-      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt, brandStyling, 3, 'premium')
+      generateHtmlCssVariation(
+        "product_cards",
+        campaignObjective,
+        productList,
+        additionalPrompt,
+        brandStyling,
+        1,
+        "minimal"
+      ),
+      generateHtmlCssVariation(
+        "product_cards",
+        campaignObjective,
+        productList,
+        additionalPrompt,
+        brandStyling,
+        2,
+        "bold"
+      ),
+      generateHtmlCssVariation(
+        "product_cards",
+        campaignObjective,
+        productList,
+        additionalPrompt,
+        brandStyling,
+        3,
+        "premium"
+      ),
     ]);
 
     // Format response
@@ -80,13 +105,13 @@ router.post('/backoffice/generate', async (req, res) => {
         html: variation.html,
         css: variation.css,
         text: cleanText(variation.text),
-        header: cleanText(variation.header)
+        header: cleanText(variation.header),
       })),
       template: generateHtmlTemplate(),
       campaignObjective: campaignObjective,
       productCount: productList.length,
-      category: category || 'all',
-      products: productList.map(product => ({
+      category: category || "all",
+      products: productList.map((product) => ({
         id: product.id,
         name: product.name,
         brand: product.brand,
@@ -94,139 +119,138 @@ router.post('/backoffice/generate', async (req, res) => {
         category: product.category,
         description: product.description,
         discount: product.discount || null,
-        image: product.image || null
+        image: product.image || null,
       })),
       generatedAt: new Date().toISOString(),
       brandName: brandName || null,
-      brandStyling: brandStyling
+      brandStyling: brandStyling,
     };
 
     res.json(response);
-    
   } catch (error) {
-    console.error('Back office generate error:', error);
+    console.error("Back office generate error:", error);
     res.status(500).json({
       success: false,
-      error: 'Failed to generate recommendations',
-      details: error.message
+      error: "Failed to generate recommendations",
+      details: error.message,
     });
   }
 });
 
 // Save a recommendation campaign for later use
-router.post('/backoffice/save-campaign', async (req, res) => {
+router.post("/backoffice/save-campaign", async (req, res) => {
   try {
-    const { 
+    const {
       campaignId,
       campaignName,
-      campaignObjective, 
-      variation, 
+      campaignObjective,
+      variation,
       targetingCriteria,
       category,
       notes,
-      products 
+      products,
     } = req.body;
-    
+
     // Validate required fields
     if (!campaignName?.trim()) {
       return res.status(400).json({
         success: false,
-        error: 'Campaign name is required'
+        error: "Campaign name is required",
       });
     }
-    
+
     if (!campaignObjective?.trim()) {
       return res.status(400).json({
         success: false,
-        error: 'Campaign objective is required'
+        error: "Campaign objective is required",
       });
     }
-    
+
     // Check if campaign name already exists
     if (savedCampaigns.has(campaignName)) {
       return res.status(400).json({
         success: false,
-        error: 'Campaign name already exists. Please choose a different name.'
+        error: "Campaign name already exists. Please choose a different name.",
       });
     }
-    
+
     // Create campaign object with targeting criteria for agent selection
     const campaign = {
       id: campaignId, // Use campaign name as ID
       name: campaignName,
       objective: campaignObjective,
-      category: category || 'all',
+      category: category || "all",
       targetingCriteria: targetingCriteria || {
         segments: [],
         interests: [],
         demographics: {},
-        behaviors: []
+        behaviors: [],
       },
-      notes: notes || '',
+      notes: notes || "",
       products: products || [],
       variation: {
-        widgetType: variation.widgetType || 'product_cards',
+        widgetType: variation.widgetType || "product_cards",
         html: variation.html,
         css: variation.css,
-        text: variation.text
+        text: variation.text,
+        header: variation.header,
       },
       template: generateHtmlTemplate(),
-      status: 'active',
+      status: "active",
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
-    
+
     // Save to storage using campaign name as key
     savedCampaigns.set(campaignName, campaign);
-    
+
     console.log(`Campaign saved with name: ${campaignName}`);
-    
+
     res.json({
       success: true,
-      message: 'Campaign saved successfully',
+      message: "Campaign saved successfully",
       campaignId: campaignName, // Return campaign name as ID
       campaignName: campaignName,
-      campaign: campaign
+      campaign: campaign,
     });
-    
   } catch (error) {
-    console.error('Save campaign error:', error);
+    console.error("Save campaign error:", error);
     res.status(500).json({
       success: false,
-      error: 'Failed to save campaign',
-      details: error.message
+      error: "Failed to save campaign",
+      details: error.message,
     });
   }
 });
 
 // Get all campaigns for back office
-router.get('/backoffice/campaigns', (req, res) => {
+router.get("/backoffice/campaigns", (req, res) => {
   try {
     const { limit = 20, offset = 0, status, category } = req.query;
-    
+
     let campaigns = Array.from(savedCampaigns.values());
-    
+
     // Filter by status if specified
     if (status) {
-      campaigns = campaigns.filter(c => c.status === status);
+      campaigns = campaigns.filter((c) => c.status === status);
     }
-    
+
     // Filter by category if specified
-    if (category && category !== 'all') {
-      campaigns = campaigns.filter(c => 
-        c.category.toLowerCase() === category.toLowerCase()
+    if (category && category !== "all") {
+      campaigns = campaigns.filter(
+        (c) => c.category.toLowerCase() === category.toLowerCase()
       );
     }
-    
+
     // Sort by creation date (newest first)
     campaigns.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
+
     // Apply pagination
     const total = campaigns.length;
     const limitNum = parseInt(limit);
     const offsetNum = parseInt(offset);
     const paginatedCampaigns = campaigns.slice(offsetNum, offsetNum + limitNum);
-    
+
     res.json({
       success: true,
       campaigns: paginatedCampaigns,
@@ -236,20 +260,19 @@ router.get('/backoffice/campaigns', (req, res) => {
         offset: offsetNum,
         page: Math.floor(offsetNum / limitNum) + 1,
         totalPages: Math.ceil(total / limitNum),
-        hasMore: offsetNum + limitNum < total
+        hasMore: offsetNum + limitNum < total,
       },
       filters: {
-        status: status || 'all',
-        category: category || 'all'
-      }
+        status: status || "all",
+        category: category || "all",
+      },
     });
-    
   } catch (error) {
-    console.error('Get campaigns error:', error);
+    console.error("Get campaigns error:", error);
     res.status(500).json({
       success: false,
-      error: 'Failed to retrieve campaigns',
-      details: error.message
+      error: "Failed to retrieve campaigns",
+      details: error.message,
     });
   }
 });
@@ -257,47 +280,43 @@ router.get('/backoffice/campaigns', (req, res) => {
 // ===== UNIFIED RECOMMENDATION ENDPOINT =====
 
 // Get recommendation based on campaign name and/or user profile
-router.post('/recommendation', async (req, res) => {
+router.post("/recommendation", async (req, res) => {
   try {
-    const { 
-      campaignName,
-      userProfile,
-      context,
-      status = 'active'
-    } = req.body;
-    
-    console.log('Unified: Getting recommendation with combined logic...');
-    
+    const { campaignName, userProfile, context, status = "active" } = req.body;
+
+    console.log("Unified: Getting recommendation with combined logic...");
+
     // Get all campaigns with specified status
-    let campaigns = Array.from(savedCampaigns.values())
-      .filter(campaign => campaign.status === status);
-    
+    let campaigns = Array.from(savedCampaigns.values()).filter(
+      (campaign) => campaign.status === status
+    );
+
     if (campaigns.length === 0) {
       return res.json({
         success: true,
         recommendation: null,
-        message: 'No recommendations available'
+        message: "No recommendations available",
       });
     }
-    
+
     // First filter by campaign name if provided
     if (campaignName) {
-      campaigns = campaigns.filter(c => 
+      campaigns = campaigns.filter((c) =>
         c.name.toLowerCase().includes(campaignName.toLowerCase())
       );
-      
+
       if (campaigns.length === 0) {
         return res.json({
           success: true,
           recommendation: null,
-          message: 'No recommendations match the campaign name criteria'
+          message: "No recommendations match the campaign name criteria",
         });
       }
     }
-    
+
     let selectedCampaign = null;
-    let matchReason = 'Campaign match';
-    
+    let matchReason = "Campaign match";
+
     // If user profile is provided, use profile-based selection from filtered campaigns
     if (userProfile && Object.keys(userProfile).length > 0) {
       selectedCampaign = await selectBestCampaignForUser(
@@ -305,32 +324,34 @@ router.post('/recommendation', async (req, res) => {
         userProfile,
         context
       );
-      
+
       if (selectedCampaign) {
-        matchReason = selectedCampaign.matchReason || 'Profile match';
+        matchReason = selectedCampaign.matchReason || "Profile match";
       }
     }
-    
+
     // If no profile-based match or no profile provided, use most recent campaign
     if (!selectedCampaign) {
       campaigns.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       selectedCampaign = campaigns[0];
-      matchReason = campaignName ? 'Campaign name match' : 'Most recent campaign';
+      matchReason = campaignName
+        ? "Campaign name match"
+        : "Most recent campaign";
     }
-    
+
     if (!selectedCampaign) {
       return res.json({
         success: true,
         recommendation: null,
-        message: 'No matching recommendations found'
+        message: "No matching recommendations found",
       });
     }
-    
+
     // Build match criteria for response
     const matchCriteria = {};
     if (campaignName) matchCriteria.campaignName = campaignName;
     if (userProfile) matchCriteria.hasProfile = true;
-    
+
     res.json({
       success: true,
       recommendation: {
@@ -339,23 +360,23 @@ router.post('/recommendation', async (req, res) => {
         html: selectedCampaign.variation.html,
         css: selectedCampaign.variation.css,
         text: selectedCampaign.variation.text,
+        header: selectedCampaign.variation.header,
         widgetType: selectedCampaign.variation.widgetType,
         category: selectedCampaign.category,
         products: selectedCampaign.products || [],
         template: generateHtmlTemplate(),
-        createdAt: selectedCampaign.createdAt
+        createdAt: selectedCampaign.createdAt,
       },
       matchReason: matchReason,
       matchCriteria: matchCriteria,
-      totalMatches: campaigns.length
+      totalMatches: campaigns.length,
     });
-    
   } catch (error) {
-    console.error('Unified recommendation error:', error);
+    console.error("Unified recommendation error:", error);
     res.status(500).json({
       success: false,
-      error: 'Failed to get recommendation',
-      details: error.message
+      error: "Failed to get recommendation",
+      details: error.message,
     });
   }
 });
@@ -363,56 +384,56 @@ router.post('/recommendation', async (req, res) => {
 // ===== LEGACY ENDPOINTS (for backward compatibility) =====
 
 // Legacy frontend endpoint - redirects to unified endpoint
-router.post('/frontend/get-recommendation', async (req, res) => {
+router.post("/frontend/get-recommendation", async (req, res) => {
   try {
     const { userProfile, context } = req.body;
-    
+
     // Call unified endpoint logic
     const unifiedReq = {
       body: {
         userProfile,
         context,
-        status: 'active'
-      }
+        status: "active",
+      },
     };
-    
+
     // Reuse the unified endpoint logic
-    return router.stack.find(layer => layer.route?.path === '/recommendation')
+    return router.stack
+      .find((layer) => layer.route?.path === "/recommendation")
       .route.stack[0].handle(unifiedReq, res);
-      
   } catch (error) {
-    console.error('Legacy frontend recommendation error:', error);
+    console.error("Legacy frontend recommendation error:", error);
     res.status(500).json({
       success: false,
-      error: 'Failed to get recommendation',
-      details: error.message
+      error: "Failed to get recommendation",
+      details: error.message,
     });
   }
 });
 
 // Legacy client endpoint - supports both GET and POST for backward compatibility
-router.get('/client/recommendation', (req, res) => {
+router.get("/client/recommendation", (req, res) => {
   try {
-    const { campaignName, status = 'active' } = req.query;
-    
+    const { campaignName, status = "active" } = req.query;
+
     // Convert GET request to unified POST format
     const unifiedReq = {
       body: {
         campaignName,
-        status
-      }
+        status,
+      },
     };
-    
+
     // Reuse the unified endpoint logic
-    return router.stack.find(layer => layer.route?.path === '/recommendation')
+    return router.stack
+      .find((layer) => layer.route?.path === "/recommendation")
       .route.stack[0].handle(unifiedReq, res);
-      
   } catch (error) {
-    console.error('Legacy client recommendation error:', error);
+    console.error("Legacy client recommendation error:", error);
     res.status(500).json({
       success: false,
-      error: 'Failed to get recommendation',
-      details: error.message
+      error: "Failed to get recommendation",
+      details: error.message,
     });
   }
 });
@@ -428,7 +449,7 @@ function formatRecommendationResponse(campaign) {
     text: campaign.variation.text,
     products: campaign.products || [],
     template: generateHtmlTemplate(),
-    createdAt: campaign.createdAt
+    createdAt: campaign.createdAt,
   };
 }
 
@@ -440,16 +461,16 @@ function getRandomProducts(products, count) {
   if (products.length <= count) {
     return products;
   }
-  
+
   // Create a copy of the array to avoid mutating the original
   const shuffled = [...products];
-  
+
   // Fisher-Yates shuffle algorithm
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  
+
   // Return the first 'count' items from the shuffled array
   return shuffled.slice(0, count);
 }
@@ -492,48 +513,63 @@ FONTS (use actual Google Fonts names):
 
 Only return the JSON object, no other text.`;
 
-    const result = await multiAgentOrchestrator.callOpenAI({
-      system: "You are a brand styling expert that returns only valid JSON with colors and fonts for brands.",
-      user: prompt
-    }, 'Brand Styling Agent');
+    const result = await multiAgentOrchestrator.callOpenAI(
+      {
+        system:
+          "You are a brand styling expert that returns only valid JSON with colors and fonts for brands.",
+        user: prompt,
+      },
+      "Brand Styling Agent"
+    );
 
     // Clean and parse the response
-    const cleanResponse = result.replace(/```json|```/g, '').trim();
+    const cleanResponse = result.replace(/```json|```/g, "").trim();
     const styling = JSON.parse(cleanResponse);
-    
+
     // Validate that we have the required properties
-    const requiredColors = ['primary', 'secondary', 'accent', 'text', 'background'];
-    const requiredFonts = ['primary', 'secondary', 'fallback'];
-    
-    const hasAllColors = styling.colors && requiredColors.every(color => 
-      styling.colors[color] && styling.colors[color].startsWith('#')
-    );
-    
-    const hasAllFonts = styling.fonts && requiredFonts.every(font => 
-      styling.fonts[font] && styling.fonts[font].length > 0
-    );
-    
+    const requiredColors = [
+      "primary",
+      "secondary",
+      "accent",
+      "text",
+      "background",
+    ];
+    const requiredFonts = ["primary", "secondary", "fallback"];
+
+    const hasAllColors =
+      styling.colors &&
+      requiredColors.every(
+        (color) =>
+          styling.colors[color] && styling.colors[color].startsWith("#")
+      );
+
+    const hasAllFonts =
+      styling.fonts &&
+      requiredFonts.every(
+        (font) => styling.fonts[font] && styling.fonts[font].length > 0
+      );
+
     if (!hasAllColors || !hasAllFonts) {
-      throw new Error('Invalid styling response format');
+      throw new Error("Invalid styling response format");
     }
-    
+
     return styling;
   } catch (error) {
-    console.error('Error getting brand styling:', error);
+    console.error("Error getting brand styling:", error);
     // Return default styling if brand detection fails
     return {
       colors: {
-        primary: '#007bff',
-        secondary: '#6c757d', 
-        accent: '#28a745',
-        text: '#333333',
-        background: '#ffffff'
+        primary: "#007bff",
+        secondary: "#6c757d",
+        accent: "#28a745",
+        text: "#333333",
+        background: "#ffffff",
       },
       fonts: {
-        primary: 'Inter',
-        secondary: 'Source Sans Pro',
-        fallback: 'sans-serif'
-      }
+        primary: "Inter",
+        secondary: "Source Sans Pro",
+        fallback: "sans-serif",
+      },
     };
   }
 }
@@ -545,41 +581,41 @@ async function selectBestCampaignForUser(campaigns, userProfile, context) {
     if (!userProfile || Object.keys(userProfile).length === 0) {
       return null;
     }
-    
+
     // Score each campaign based on user profile match
-    const scoredCampaigns = campaigns.map(campaign => {
+    const scoredCampaigns = campaigns.map((campaign) => {
       let score = 0;
       let matchReasons = [];
-      
+
       const targeting = campaign.targetingCriteria || {};
-      
+
       // Check segment matches
       if (targeting.segments && userProfile.segments) {
-        const matchingSegments = targeting.segments.filter(segment => 
+        const matchingSegments = targeting.segments.filter((segment) =>
           userProfile.segments.includes(segment)
         );
         score += matchingSegments.length * 10;
         if (matchingSegments.length > 0) {
-          matchReasons.push(`Segments: ${matchingSegments.join(', ')}`);
+          matchReasons.push(`Segments: ${matchingSegments.join(", ")}`);
         }
       }
-      
+
       // Check interest matches
       if (targeting.interests && userProfile.interests) {
-        const matchingInterests = targeting.interests.filter(interest => 
+        const matchingInterests = targeting.interests.filter((interest) =>
           userProfile.interests.includes(interest)
         );
         score += matchingInterests.length * 8;
         if (matchingInterests.length > 0) {
-          matchReasons.push(`Interests: ${matchingInterests.join(', ')}`);
+          matchReasons.push(`Interests: ${matchingInterests.join(", ")}`);
         }
       }
-      
+
       // Check demographic matches
       if (targeting.demographics && userProfile.demographics) {
         const demos = targeting.demographics;
         const userDemos = userProfile.demographics;
-        
+
         // Age range check
         if (demos.ageMin && demos.ageMax && userDemos.age) {
           if (userDemos.age >= demos.ageMin && userDemos.age <= demos.ageMax) {
@@ -587,7 +623,7 @@ async function selectBestCampaignForUser(campaigns, userProfile, context) {
             matchReasons.push(`Age: ${userDemos.age}`);
           }
         }
-        
+
         // Location check
         if (demos.location && userDemos.location) {
           if (demos.location === userDemos.location) {
@@ -596,18 +632,18 @@ async function selectBestCampaignForUser(campaigns, userProfile, context) {
           }
         }
       }
-      
+
       // Check behavior matches
       if (targeting.behaviors && userProfile.behaviors) {
-        const matchingBehaviors = targeting.behaviors.filter(behavior => 
+        const matchingBehaviors = targeting.behaviors.filter((behavior) =>
           userProfile.behaviors.includes(behavior)
         );
         score += matchingBehaviors.length * 6;
         if (matchingBehaviors.length > 0) {
-          matchReasons.push(`Behaviors: ${matchingBehaviors.join(', ')}`);
+          matchReasons.push(`Behaviors: ${matchingBehaviors.join(", ")}`);
         }
       }
-      
+
       // Category preference
       if (campaign.category && userProfile.preferences?.categories) {
         if (userProfile.preferences.categories.includes(campaign.category)) {
@@ -615,56 +651,74 @@ async function selectBestCampaignForUser(campaigns, userProfile, context) {
           matchReasons.push(`Category: ${campaign.category}`);
         }
       }
-      
+
       return {
         ...campaign,
         score: score,
-        matchReason: matchReasons.join('; ')
+        matchReason: matchReasons.join("; "),
       };
     });
-    
+
     // Filter out campaigns with zero score (no match)
-    const matchingCampaigns = scoredCampaigns.filter(c => c.score > 0);
-    
+    const matchingCampaigns = scoredCampaigns.filter((c) => c.score > 0);
+
     if (matchingCampaigns.length === 0) {
       return null; // No matching campaigns
     }
-    
+
     // Sort by score and return best match
     matchingCampaigns.sort((a, b) => b.score - a.score);
-    
+
     return matchingCampaigns[0];
-    
   } catch (error) {
-    console.error('Error in campaign selection:', error);
+    console.error("Error in campaign selection:", error);
     return null;
   }
 }
 
 // Generate HTML/CSS variation with persuasion text
-async function generateHtmlCssVariation(widgetType, campaignObjective, productList, additionalPrompt, brandStyling = null, variation = 1, style = 'standard') {
+async function generateHtmlCssVariation(
+  widgetType,
+  campaignObjective,
+  productList,
+  additionalPrompt,
+  brandStyling = null,
+  variation = 1,
+  style = "standard"
+) {
   try {
     // Add style-specific instructions to the prompt
     const stylePrompts = {
-      minimal: 'Create a MINIMAL, clean design with lots of whitespace, subtle borders, and understated elegance. Use thin fonts, light colors, and simple layouts.',
-      bold: 'Create a BOLD, high-impact design with strong contrasts, thick borders, large fonts, and eye-catching elements. Use dark backgrounds with bright accents.',
-      premium: 'Create a PREMIUM, luxurious design with rich colors, elegant typography, subtle animations, and sophisticated layouts. Use gold accents and premium feel.'
+      minimal:
+        "Create a MINIMAL, clean design with lots of whitespace, subtle borders, and understated elegance. Use thin fonts, light colors, and simple layouts.",
+      bold: "Create a BOLD, high-impact design with strong contrasts, thick borders, large fonts, and eye-catching elements. Use dark backgrounds with bright accents.",
+      premium:
+        "Create a PREMIUM, luxurious design with rich colors, elegant typography, subtle animations, and sophisticated layouts. Use gold accents and premium feel.",
     };
-    
-    const enhancedPrompt = `${additionalPrompt || ''} ${stylePrompts[style] || ''}`;
-    
-    // Generate persuasion text and header using LLM with brand styling
-    const persuasionData = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, enhancedPrompt, brandStyling);
 
-    // Generate HTML/CSS widget using the htmlCssAgent with brand styling and style variation
-    const htmlCssResult = await multiAgentOrchestrator.specialists.htmlCss.generateRecommendationWidget(
+    const enhancedPrompt = `${additionalPrompt || ""} ${
+      stylePrompts[style] || ""
+    }`;
+
+    // Generate persuasion text and header using LLM with brand styling
+    const persuasionData = await generatePersuasionTextWithLLM(
+      widgetType,
       campaignObjective,
       productList,
       enhancedPrompt,
-      widgetType,
-      brandStyling,
-      variation
+      brandStyling
     );
+
+    // Generate HTML/CSS widget using the htmlCssAgent with brand styling and style variation
+    const htmlCssResult =
+      await multiAgentOrchestrator.specialists.htmlCss.generateRecommendationWidget(
+        campaignObjective,
+        productList,
+        enhancedPrompt,
+        widgetType,
+        brandStyling,
+        variation
+      );
 
     // Extract HTML and CSS from the widget code
     const { html, css } = extractHtmlAndCss(htmlCssResult.widgetCode);
@@ -674,87 +728,112 @@ async function generateHtmlCssVariation(widgetType, campaignObjective, productLi
       html: html,
       css: css,
       text: persuasionData.text,
-      header: persuasionData.header
+      header: persuasionData.header,
     };
-
   } catch (error) {
     console.error(`Error generating ${widgetType} variation:`, error);
-    
+
     // Fallback with LLM text and header
-    const fallbackPersuasionData = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, brandStyling, true);
-    
+    const fallbackPersuasionData = await generatePersuasionTextWithLLM(
+      widgetType,
+      campaignObjective,
+      productList,
+      additionalPrompt,
+      brandStyling,
+      true
+    );
+
     return {
       widgetType: widgetType,
       html: generateFallbackHtml(widgetType, productList),
       css: generateFallbackCss(widgetType, brandStyling, style),
       text: fallbackPersuasionData.text,
-      header: fallbackPersuasionData.header
+      header: fallbackPersuasionData.header,
     };
   }
 }
 
 // Clean text by removing markdown, bullets, quotes, and other markup
 function cleanText(text) {
-  if (!text || typeof text !== 'string') return text;
-  
-  return text
-    // Remove markdown formatting
-    .replace(/\*\*(.*?)\*\*/g, '$1')  // Bold **text**
-    .replace(/\*(.*?)\*/g, '$1')      // Italic *text*
-    .replace(/__(.*?)__/g, '$1')      // Bold __text__
-    .replace(/_(.*?)_/g, '$1')        // Italic _text_
-    
-    // Remove bullets and list markers
-    .replace(/^[\s]*[•·▪▫‣⁃]\s*/gm, '') // Various bullet characters
-    .replace(/^[\s]*[-*+]\s*/gm, '')     // Dash/asterisk/plus bullets
-    .replace(/^[\s]*\d+\.\s*/gm, '')     // Numbered lists
-    
-    // Remove quotes
-    .replace(/^["'`]/g, '')   // Starting quotes
-    .replace(/["'`]$/g, '')   // Ending quotes
-    .replace(/["""''``]/g, '') // Smart quotes
-    
-    // Remove other markdown elements
-    .replace(/#{1,6}\s*/g, '')       // Headers
-    .replace(/`([^`]+)`/g, '$1')     // Inline code
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Links
-    
-    // Clean up whitespace
-    .replace(/\s+/g, ' ')     // Multiple spaces to single
-    .replace(/^\s+|\s+$/g, '') // Trim start/end
-    .trim();
+  if (!text || typeof text !== "string") return text;
+
+  return (
+    text
+      // Remove markdown formatting
+      .replace(/\*\*(.*?)\*\*/g, "$1") // Bold **text**
+      .replace(/\*(.*?)\*/g, "$1") // Italic *text*
+      .replace(/__(.*?)__/g, "$1") // Bold __text__
+      .replace(/_(.*?)_/g, "$1") // Italic _text_
+
+      // Remove bullets and list markers
+      .replace(/^[\s]*[•·▪▫‣⁃]\s*/gm, "") // Various bullet characters
+      .replace(/^[\s]*[-*+]\s*/gm, "") // Dash/asterisk/plus bullets
+      .replace(/^[\s]*\d+\.\s*/gm, "") // Numbered lists
+
+      // Remove quotes
+      .replace(/^["'`]/g, "") // Starting quotes
+      .replace(/["'`]$/g, "") // Ending quotes
+      .replace(/["""''``]/g, "") // Smart quotes
+
+      // Remove other markdown elements
+      .replace(/#{1,6}\s*/g, "") // Headers
+      .replace(/`([^`]+)`/g, "$1") // Inline code
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // Links
+
+      // Clean up whitespace
+      .replace(/\s+/g, " ") // Multiple spaces to single
+      .replace(/^\s+|\s+$/g, "") // Trim start/end
+      .trim()
+  );
 }
 
 // Generate persuasion text using LLM
-async function generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, brandStyling = null, isFallback = false) {
+async function generatePersuasionTextWithLLM(
+  widgetType,
+  campaignObjective,
+  productList,
+  additionalPrompt,
+  brandStyling = null,
+  isFallback = false
+) {
   try {
     // Extract pricing psychology data without product details
-    const hasDiscounts = productList.some(p => p.discount && p.discount > 0);
-    const maxDiscount = hasDiscounts ? Math.max(...productList.map(p => p.discount || 0)) : 0;
-    const priceRange = productList.length > 0 ? {
-      min: Math.min(...productList.map(p => parseFloat(p.price))),
-      max: Math.max(...productList.map(p => parseFloat(p.price)))
-    } : { min: 0, max: 0 };
-    const category = productList.length > 0 ? productList[0].category : 'products';
-    
+    const hasDiscounts = productList.some((p) => p.discount && p.discount > 0);
+    const maxDiscount = hasDiscounts
+      ? Math.max(...productList.map((p) => p.discount || 0))
+      : 0;
+    const priceRange =
+      productList.length > 0
+        ? {
+            min: Math.min(...productList.map((p) => parseFloat(p.price))),
+            max: Math.max(...productList.map((p) => parseFloat(p.price))),
+          }
+        : { min: 0, max: 0 };
+    const category =
+      productList.length > 0 ? productList[0].category : "products";
+
     const persuasionContext = `
 CAMPAIGN OBJECTIVE: ${campaignObjective}
 
 PRICING CONTEXT:
 - Product Category: ${category}
-- Has Special Offers: ${hasDiscounts ? 'Yes' : 'No'}
+- Has Special Offers: ${hasDiscounts ? "Yes" : "No"}
 - Maximum Discount Available: ${maxDiscount}%
 - Price Range: $${priceRange.min} - $${priceRange.max}
 - Number of Products: ${productList.length}
 
 WIDGET TYPE: ${widgetType}
 
-${brandStyling ? `BRAND STYLING CONTEXT:
+${
+  brandStyling
+    ? `BRAND STYLING CONTEXT:
 - Primary Brand Color: ${brandStyling.colors.primary}
 - Primary Font: ${brandStyling.fonts.primary}
-- Brand Voice: Consider the brand's visual identity when crafting messaging tone` : ''}
+- Brand Voice: Consider the brand's visual identity when crafting messaging tone`
+    : ""
+}
 
-ADDITIONAL REQUIREMENTS: ${additionalPrompt || 'None'}
+ADDITIONAL REQUIREMENTS: ${additionalPrompt || "None"}
 
 Generate compelling, price-focused persuasion text that would accompany a ${widgetType} widget. 
 
@@ -765,68 +844,98 @@ The text should be:
 - Focused on savings, value, and limited-time offers
 - General enough to work with any products in this category
 - Include strong call-to-action language
-${brandStyling ? `- Reflect the brand's personality based on the font choice (${brandStyling.fonts.primary}) and color scheme
-- Use a tone that aligns with the brand's visual identity` : ''}
+${
+  brandStyling
+    ? `- Reflect the brand's personality based on the font choice (${brandStyling.fonts.primary}) and color scheme
+- Use a tone that aligns with the brand's visual identity`
+    : ""
+}
 
 Examples of good price-focused persuasion:
 "Limited time offer! Save up to 25% on premium gear. Don't miss these exclusive deals!"
 "Unbeatable prices on quality products! Shop now and save big before it's too late!"
 "Flash sale ends soon! Get the best deals of the season while supplies last!"
 
-${brandStyling ? `BRAND GUIDANCE:
+${
+  brandStyling
+    ? `BRAND GUIDANCE:
 - Font choice "${brandStyling.fonts.primary}" suggests a certain brand personality - craft messaging that complements this
-- Primary color ${brandStyling.colors.primary} should influence the energy and tone of the messaging` : ''}
+- Primary color ${brandStyling.colors.primary} should influence the energy and tone of the messaging`
+    : ""
+}
 
 Return only the persuasion text, no additional formatting or explanations.`;
 
-    const persuasionResult = await multiAgentOrchestrator.specialists.persuasion.createPersuasiveContent(persuasionContext);
-    const persuasionText = persuasionResult.content || persuasionResult.text || `Limited time offers on premium ${category}! Save up to ${maxDiscount}% - shop now!`;
-    
+    const persuasionResult =
+      await multiAgentOrchestrator.specialists.persuasion.createPersuasiveContent(
+        persuasionContext
+      );
+    const persuasionText =
+      persuasionResult.content ||
+      persuasionResult.text ||
+      `Limited time offers on premium ${category}! Save up to ${maxDiscount}% - shop now!`;
+
     // Generate matching header copy
-    const headerResult = await multiAgentOrchestrator.specialists.persuasion.createHeaderCopy(persuasionContext, persuasionText, widgetType);
+    const headerResult =
+      await multiAgentOrchestrator.specialists.persuasion.createHeaderCopy(
+        persuasionContext,
+        persuasionText,
+        widgetType
+      );
     const headerCopy = headerResult.headerCopy || `${category} Deals`;
-    
+
     return {
       text: persuasionText,
-      header: headerCopy
+      header: headerCopy,
     };
-
   } catch (error) {
     console.error(`Error generating persuasion text:`, error);
-    const category = productList.length > 0 ? productList[0].category : 'products';
-    const hasDiscounts = productList.some(p => p.discount && p.discount > 0);
-    const maxDiscount = hasDiscounts ? Math.max(...productList.map(p => p.discount || 0)) : 0;
-    
+    const category =
+      productList.length > 0 ? productList[0].category : "products";
+    const hasDiscounts = productList.some((p) => p.discount && p.discount > 0);
+    const maxDiscount = hasDiscounts
+      ? Math.max(...productList.map((p) => p.discount || 0))
+      : 0;
+
     // Generate brand-aware fallback text and header
     let fallbackText, fallbackHeader;
-    
+
     if (brandStyling) {
-      const isModernFont = ['Inter', 'Roboto', 'Montserrat', 'Poppins'].includes(brandStyling.fonts.primary);
-      const isPlayfulFont = ['Comfortaa', 'Quicksand', 'Nunito'].includes(brandStyling.fonts.primary);
-      
+      const isModernFont = [
+        "Inter",
+        "Roboto",
+        "Montserrat",
+        "Poppins",
+      ].includes(brandStyling.fonts.primary);
+      const isPlayfulFont = ["Comfortaa", "Quicksand", "Nunito"].includes(
+        brandStyling.fonts.primary
+      );
+
       if (isPlayfulFont) {
-        fallbackText = hasDiscounts 
+        fallbackText = hasDiscounts
           ? `🎉 Amazing ${category} deals! Save up to ${maxDiscount}% - grab yours now!`
           : `✨ Discover awesome ${category} at great prices! Shop the collection now!`;
-        fallbackHeader = hasDiscounts ? `Amazing ${category} Deals` : `Awesome ${category}`;
+        fallbackHeader = hasDiscounts
+          ? `Amazing ${category} Deals`
+          : `Awesome ${category}`;
       } else if (isModernFont) {
-        fallbackText = hasDiscounts 
+        fallbackText = hasDiscounts
           ? `Premium ${category} on sale. Save up to ${maxDiscount}% - limited time.`
           : `Curated ${category} collection. Exceptional quality, competitive prices.`;
         fallbackHeader = hasDiscounts ? `Premium Sale` : `Curated Collection`;
       }
     }
-    
+
     if (!fallbackText) {
-      fallbackText = hasDiscounts 
+      fallbackText = hasDiscounts
         ? `Exclusive deals on ${category}! Save up to ${maxDiscount}% - limited time only!`
         : `Discover premium ${category} at unbeatable prices. Shop now for the best selection!`;
       fallbackHeader = hasDiscounts ? `Exclusive Deals` : `Premium ${category}`;
     }
-    
+
     return {
       text: fallbackText,
-      header: fallbackHeader
+      header: fallbackHeader,
     };
   }
 }
@@ -836,25 +945,26 @@ function extractHtmlAndCss(widgetCode) {
   try {
     const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
     const styleMatches = widgetCode.match(styleRegex);
-    
-    let css = '';
+
+    let css = "";
     if (styleMatches) {
-      css = styleMatches.map(match => {
-        return match.replace(/<\/?style[^>]*>/gi, '').trim();
-      }).join('\n');
+      css = styleMatches
+        .map((match) => {
+          return match.replace(/<\/?style[^>]*>/gi, "").trim();
+        })
+        .join("\n");
     }
 
-    let html = widgetCode.replace(styleRegex, '').trim();
-    
+    let html = widgetCode.replace(styleRegex, "").trim();
+
     if (!css && html) {
-      return { html: html, css: '' };
+      return { html: html, css: "" };
     }
 
     return { html: html || widgetCode, css: css };
-
   } catch (error) {
-    console.error('Error extracting HTML/CSS:', error);
-    return { html: widgetCode, css: '' };
+    console.error("Error extracting HTML/CSS:", error);
+    return { html: widgetCode, css: "" };
   }
 }
 
@@ -876,97 +986,119 @@ function generateHtmlTemplate() {
         </div>
       </div>
     </div>`,
-    
+
     // Container template
-    containerTemplate: `<div class="product-card-container">{{productCards}}</div>`
-   };
+    containerTemplate: `<div class="product-card-container">{{productCards}}</div>`,
+  };
 }
 // Fallback HTML generator
 function generateFallbackHtml(widgetType, productList) {
   const products = productList.slice(0, 3);
-  
+
   return `
 <div class="product-card-container">
-  ${products.map(product => `
+  ${products
+    .map(
+      (product) => `
   <div class="product-card">
-    <div class="product-image" style="background-image: url('${product.image || 'https://via.placeholder.com/150'}')"></div>
+    <div class="product-image" style="background-image: url('${
+      product.image || "https://via.placeholder.com/150"
+    }')"></div>
     <div class="product-content">
       <div class="product-info">
         <h2 class="product-name">${product.name}</h2>
         <p class="product-brand">${product.brand}</p>
-        <p class="product-description">${product.description || 'Premium quality product'}</p>
-        <p class="product-price">$${product.price} ${product.discount ? `<span class="product-discount">${product.discount}% OFF</span>` : ''}</p>
+        <p class="product-description">${
+          product.description || "Premium quality product"
+        }</p>
+        <p class="product-price">$${product.price} ${
+        product.discount
+          ? `<span class="product-discount">${product.discount}% OFF</span>`
+          : ""
+      }</p>
       </div>
       <div class="product-action">
         <button class="cta-button">Add to Cart</button>
       </div>
     </div>
-  </div>`).join('')}
+  </div>`
+    )
+    .join("")}
 </div>`;
 }
 
-// Fallback CSS generator  
-function generateFallbackCss(widgetType, brandStyling = null, style = 'standard') {
+// Fallback CSS generator
+function generateFallbackCss(
+  widgetType,
+  brandStyling = null,
+  style = "standard"
+) {
   // Use brand styling if available, otherwise default styling
   const colors = brandStyling?.colors || {
-    primary: '#007bff',
-    secondary: '#6c757d',
-    accent: '#28a745', 
-    text: '#333333',
-    background: '#ffffff'
+    primary: "#007bff",
+    secondary: "#6c757d",
+    accent: "#28a745",
+    text: "#333333",
+    background: "#ffffff",
   };
-  
+
   const fonts = brandStyling?.fonts || {
-    primary: 'Inter',
-    secondary: 'Source Sans Pro',
-    fallback: 'sans-serif'
+    primary: "Inter",
+    secondary: "Source Sans Pro",
+    fallback: "sans-serif",
   };
 
   // Style-specific customizations
   const styleConfigs = {
     minimal: {
-      borderRadius: '2px',
-      borderWidth: '1px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-      hoverShadow: '0 2px 6px rgba(0,0,0,0.08)',
-      gap: '2rem',
-      padding: '2rem',
-      titleSize: '1.1rem',
-      fontWeight: '400',
-      buttonPadding: '10px 20px',
-      background: '#fafafa'
+      borderRadius: "2px",
+      borderWidth: "1px",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+      hoverShadow: "0 2px 6px rgba(0,0,0,0.08)",
+      gap: "2rem",
+      padding: "2rem",
+      titleSize: "1.1rem",
+      fontWeight: "400",
+      buttonPadding: "10px 20px",
+      background: "#fafafa",
     },
     bold: {
-      borderRadius: '0px',
-      borderWidth: '3px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-      hoverShadow: '0 8px 24px rgba(0,0,0,0.3)',
-      gap: '1rem',
-      padding: '1rem',
-      titleSize: '1.5rem',
-      fontWeight: '800',
-      buttonPadding: '16px 32px',
-      background: '#000000'
+      borderRadius: "0px",
+      borderWidth: "3px",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+      hoverShadow: "0 8px 24px rgba(0,0,0,0.3)",
+      gap: "1rem",
+      padding: "1rem",
+      titleSize: "1.5rem",
+      fontWeight: "800",
+      buttonPadding: "16px 32px",
+      background: "#000000",
     },
     premium: {
-      borderRadius: '16px',
-      borderWidth: '1px',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-      hoverShadow: '0 12px 48px rgba(0,0,0,0.15)',
-      gap: '1.5rem',
-      padding: '1.5rem',
-      titleSize: '1.3rem',
-      fontWeight: '600',
-      buttonPadding: '14px 28px',
-      background: 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)'
-    }
+      borderRadius: "16px",
+      borderWidth: "1px",
+      boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+      hoverShadow: "0 12px 48px rgba(0,0,0,0.15)",
+      gap: "1.5rem",
+      padding: "1.5rem",
+      titleSize: "1.3rem",
+      fontWeight: "600",
+      buttonPadding: "14px 28px",
+      background: "linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)",
+    },
   };
 
   const config = styleConfigs[style] || styleConfigs.minimal;
 
   // Generate Google Fonts import URL
-  const fontImports = `@import url('https://fonts.googleapis.com/css2?family=${fonts.primary.replace(' ', '+')}:wght@400;500;600;700;800&family=${fonts.secondary.replace(' ', '+')}:wght@300;400;500&display=swap');`;
-  
+  const fontImports = `@import url('https://fonts.googleapis.com/css2?family=${fonts.primary.replace(
+    " ",
+    "+"
+  )}:wght@400;500;600;700;800&family=${fonts.secondary.replace(
+    " ",
+    "+"
+  )}:wght@300;400;500&display=swap');`;
+
   return `${fontImports}
 
 .product-card-container {
@@ -974,7 +1106,7 @@ function generateFallbackCss(widgetType, brandStyling = null, style = 'standard'
   grid-template-columns: repeat(3, 1fr);
   gap: ${config.gap};
   padding: ${config.padding};
-  background: ${style === 'bold' ? config.background : colors.background};
+  background: ${style === "bold" ? config.background : colors.background};
   align-items: stretch;
 }
 @media (max-width: 768px) {
@@ -988,10 +1120,12 @@ function generateFallbackCss(widgetType, brandStyling = null, style = 'standard'
   }
 }
 .product-card {
-  border: ${config.borderWidth} solid ${style === 'bold' ? colors.primary : colors.secondary};
+  border: ${config.borderWidth} solid ${
+    style === "bold" ? colors.primary : colors.secondary
+  };
   border-radius: ${config.borderRadius};
   overflow: hidden;
-  background: ${style === 'bold' ? '#111' : colors.background};
+  background: ${style === "bold" ? "#111" : colors.background};
   box-shadow: ${config.boxShadow};
   transition: all 0.3s ease;
   display: flex;
@@ -1028,28 +1162,28 @@ function generateFallbackCss(widgetType, brandStyling = null, style = 'standard'
   font-size: ${config.titleSize};
   font-weight: ${config.fontWeight};
   margin: 0 0 0.5rem 0;
-  color: ${style === 'bold' ? colors.background : colors.text};
+  color: ${style === "bold" ? colors.background : colors.text};
 }
 .product-brand {
   font-family: '${fonts.secondary}', ${fonts.fallback};
-  font-size: ${style === 'bold' ? '1rem' : '0.9rem'};
-  color: ${style === 'bold' ? colors.accent : colors.secondary};
+  font-size: ${style === "bold" ? "1rem" : "0.9rem"};
+  color: ${style === "bold" ? colors.accent : colors.secondary};
   margin: 0 0 0.75rem 0;
   text-transform: uppercase;
-  letter-spacing: ${style === 'premium' ? '1px' : '0.5px'};
+  letter-spacing: ${style === "premium" ? "1px" : "0.5px"};
 }
 .product-description {
   font-family: '${fonts.secondary}', ${fonts.fallback};
-  font-size: ${style === 'minimal' ? '0.85rem' : '0.9rem'};
-  color: ${style === 'bold' ? '#ccc' : colors.secondary};
+  font-size: ${style === "minimal" ? "0.85rem" : "0.9rem"};
+  color: ${style === "bold" ? "#ccc" : colors.secondary};
   margin: 0 0 1rem 0;
-  line-height: ${style === 'premium' ? '1.6' : '1.4'};
+  line-height: ${style === "premium" ? "1.6" : "1.4"};
 }
 .product-price {
   font-family: '${fonts.primary}', ${fonts.fallback};
-  font-size: ${style === 'bold' ? '1.3rem' : '1.1rem'};
-  font-weight: ${style === 'minimal' ? '500' : '700'};
-  color: ${style === 'bold' ? colors.primary : colors.text};
+  font-size: ${style === "bold" ? "1.3rem" : "1.1rem"};
+  font-weight: ${style === "minimal" ? "500" : "700"};
+  color: ${style === "bold" ? colors.primary : colors.text};
   margin: 0 0 0.5rem 0;
 }
 .product-discount {
@@ -1064,28 +1198,32 @@ function generateFallbackCss(widgetType, brandStyling = null, style = 'standard'
 }
 .cta-button {
   font-family: '${fonts.primary}', ${fonts.fallback};
-  background: ${style === 'minimal' ? 'transparent' : colors.primary};
-  color: ${style === 'minimal' ? colors.primary : colors.background};
-  border: ${style === 'minimal' ? `2px solid ${colors.primary}` : 'none'};
+  background: ${style === "minimal" ? "transparent" : colors.primary};
+  color: ${style === "minimal" ? colors.primary : colors.background};
+  border: ${style === "minimal" ? `2px solid ${colors.primary}` : "none"};
   padding: ${config.buttonPadding};
-  border-radius: ${style === 'bold' ? '0' : style === 'premium' ? '50px' : '4px'};
-  font-weight: ${style === 'bold' ? '800' : '600'};
+  border-radius: ${
+    style === "bold" ? "0" : style === "premium" ? "50px" : "4px"
+  };
+  font-weight: ${style === "bold" ? "800" : "600"};
   cursor: pointer;
   width: 100%;
   display: block;
   text-align: center;
   text-decoration: none;
   transition: all 0.3s ease;
-  text-transform: ${style === 'bold' ? 'uppercase' : 'none'};
-  letter-spacing: ${style === 'bold' ? '1px' : '0'};
+  text-transform: ${style === "bold" ? "uppercase" : "none"};
+  letter-spacing: ${style === "bold" ? "1px" : "0"};
 }
 .cta-button:hover {
-  background: ${style === 'minimal' ? colors.primary : colors.accent};
-  color: ${style === 'minimal' ? colors.background : colors.background};
-  transform: ${style === 'premium' ? 'scale(1.05)' : 'translateY(-1px)'};
-  box-shadow: ${style === 'premium' ? '0 8px 24px rgba(0,0,0,0.2)' : 'none'};
+  background: ${style === "minimal" ? colors.primary : colors.accent};
+  color: ${style === "minimal" ? colors.background : colors.background};
+  transform: ${style === "premium" ? "scale(1.05)" : "translateY(-1px)"};
+  box-shadow: ${style === "premium" ? "0 8px 24px rgba(0,0,0,0.2)" : "none"};
 }
-${style === 'premium' ? `
+${
+  style === "premium"
+    ? `
 .product-card::before {
   content: '';
   position: absolute;
@@ -1095,7 +1233,9 @@ ${style === 'premium' ? `
   height: 80px;
   background: linear-gradient(135deg, ${colors.accent} 0%, transparent 100%);
   opacity: 0.3;
-}` : ''}`;
+}`
+    : ""
+}`;
 }
 
-module.exports = router; 
+module.exports = router;
