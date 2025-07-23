@@ -11,7 +11,7 @@ const savedCampaigns = new Map(); // key: campaign name, value: campaign data
 // Generate 3 recommendation variations for marketers
 router.post('/backoffice/generate', async (req, res) => {
   try {
-    const { campaignObjective, additionalPrompt, category } = req.body;
+    const { campaignObjective, additionalPrompt, category, brandName } = req.body;
     
     // Validate required fields
     if (!campaignObjective?.trim()) {
@@ -22,6 +22,18 @@ router.post('/backoffice/generate', async (req, res) => {
     }
 
     console.log('Back office: Generating 3 variations for marketer...');
+
+    // Get brand colors and fonts if brand name is provided
+    let brandStyling = null;
+    if (brandName && brandName.trim()) {
+      try {
+        brandStyling = await getBrandStyling(brandName.trim());
+        console.log(`Brand styling for ${brandName}:`, brandStyling);
+      } catch (error) {
+        console.error('Error getting brand styling:', error);
+        // Continue without brand styling if there's an error
+      }
+    }
 
     // Load products from data folder
     const allProducts = multiAgentOrchestrator.loadProducts();
@@ -49,11 +61,14 @@ router.post('/backoffice/generate', async (req, res) => {
       }
     }
 
+    // Limit to maximum 3 products for widget display
+    productList = productList.slice(0, 3);
+
     // Generate 3 different variations
     const variations = await Promise.all([
-      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt),
-      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt),
-      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt)
+      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt, brandStyling),
+      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt, brandStyling),
+      generateHtmlCssVariation('product_cards', campaignObjective, productList, additionalPrompt, brandStyling)
     ]);
 
     // Format response
@@ -80,7 +95,9 @@ router.post('/backoffice/generate', async (req, res) => {
         discount: product.discount || null,
         image: product.image || null
       })),
-      generatedAt: new Date().toISOString()
+      generatedAt: new Date().toISOString(),
+      brandName: brandName || null,
+      brandStyling: brandStyling
     };
 
     res.json(response);
@@ -380,6 +397,90 @@ function formatRecommendationResponse(campaign) {
 
 // ===== HELPER FUNCTIONS =====
 
+// Get brand colors and fonts using OpenAI
+async function getBrandStyling(brandName) {
+  try {
+    const prompt = `You are a brand styling expert. Given a brand name, return the official brand colors and typography in a JSON format.
+
+Brand: ${brandName}
+
+Return only a JSON object with this exact structure:
+{
+  "colors": {
+    "primary": "#hexcode",
+    "secondary": "#hexcode", 
+    "accent": "#hexcode",
+    "text": "#hexcode",
+    "background": "#hexcode"
+  },
+  "fonts": {
+    "primary": "Google Font Name",
+    "secondary": "Google Font Name",
+    "fallback": "serif, sans-serif, or monospace"
+  }
+}
+
+For the brand "${brandName}", provide:
+COLORS:
+- primary: The main brand color (usually the most recognizable color)
+- secondary: A complementary color often used with the primary
+- accent: A color used for highlights, buttons, or calls-to-action
+- text: A suitable text color that works with the brand
+- background: A suitable background color that works with the brand
+
+FONTS (use actual Google Fonts names):
+- primary: The main font used for headings and important text (e.g., "Roboto", "Open Sans", "Montserrat")
+- secondary: A complementary font for body text (e.g., "Lato", "Source Sans Pro", "Inter")
+- fallback: CSS font family fallback ("sans-serif", "serif", or "monospace")
+
+Only return the JSON object, no other text.`;
+
+    const result = await multiAgentOrchestrator.callOpenAI({
+      system: "You are a brand styling expert that returns only valid JSON with colors and fonts for brands.",
+      user: prompt
+    }, 'Brand Styling Agent');
+
+    // Clean and parse the response
+    const cleanResponse = result.replace(/```json|```/g, '').trim();
+    const styling = JSON.parse(cleanResponse);
+    
+    // Validate that we have the required properties
+    const requiredColors = ['primary', 'secondary', 'accent', 'text', 'background'];
+    const requiredFonts = ['primary', 'secondary', 'fallback'];
+    
+    const hasAllColors = styling.colors && requiredColors.every(color => 
+      styling.colors[color] && styling.colors[color].startsWith('#')
+    );
+    
+    const hasAllFonts = styling.fonts && requiredFonts.every(font => 
+      styling.fonts[font] && styling.fonts[font].length > 0
+    );
+    
+    if (!hasAllColors || !hasAllFonts) {
+      throw new Error('Invalid styling response format');
+    }
+    
+    return styling;
+  } catch (error) {
+    console.error('Error getting brand styling:', error);
+    // Return default styling if brand detection fails
+    return {
+      colors: {
+        primary: '#007bff',
+        secondary: '#6c757d', 
+        accent: '#28a745',
+        text: '#333333',
+        background: '#ffffff'
+      },
+      fonts: {
+        primary: 'Inter',
+        secondary: 'Source Sans Pro',
+        fallback: 'sans-serif'
+      }
+    };
+  }
+}
+
 // Selection agent logic to find best campaign for user
 async function selectBestCampaignForUser(campaigns, userProfile, context) {
   try {
@@ -484,17 +585,18 @@ async function selectBestCampaignForUser(campaigns, userProfile, context) {
 }
 
 // Generate HTML/CSS variation with persuasion text
-async function generateHtmlCssVariation(widgetType, campaignObjective, productList, additionalPrompt) {
+async function generateHtmlCssVariation(widgetType, campaignObjective, productList, additionalPrompt, brandStyling = null) {
   try {
-    // Generate persuasion text using LLM
-    const persuasionText = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt);
+    // Generate persuasion text using LLM with brand styling
+    const persuasionText = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, brandStyling);
 
-    // Generate HTML/CSS widget using the htmlCssAgent
+    // Generate HTML/CSS widget using the htmlCssAgent with brand styling
     const htmlCssResult = await multiAgentOrchestrator.specialists.htmlCss.generateRecommendationWidget(
       campaignObjective,
       productList,
       additionalPrompt || '',
-      widgetType
+      widgetType,
+      brandStyling
     );
 
     // Extract HTML and CSS from the widget code
@@ -511,19 +613,19 @@ async function generateHtmlCssVariation(widgetType, campaignObjective, productLi
     console.error(`Error generating ${widgetType} variation:`, error);
     
     // Fallback with LLM text
-    const fallbackPersuasionText = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, true);
+    const fallbackPersuasionText = await generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, brandStyling, true);
     
     return {
       widgetType: widgetType,
       html: generateFallbackHtml(widgetType, productList),
-      css: generateFallbackCss(widgetType),
+      css: generateFallbackCss(widgetType, brandStyling),
       text: fallbackPersuasionText
     };
   }
 }
 
 // Generate persuasion text using LLM
-async function generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, isFallback = false) {
+async function generatePersuasionTextWithLLM(widgetType, campaignObjective, productList, additionalPrompt, brandStyling = null, isFallback = false) {
   try {
     // Extract pricing psychology data without product details
     const hasDiscounts = productList.some(p => p.discount && p.discount > 0);
@@ -546,6 +648,11 @@ PRICING CONTEXT:
 
 WIDGET TYPE: ${widgetType}
 
+${brandStyling ? `BRAND STYLING CONTEXT:
+- Primary Brand Color: ${brandStyling.colors.primary}
+- Primary Font: ${brandStyling.fonts.primary}
+- Brand Voice: Consider the brand's visual identity when crafting messaging tone` : ''}
+
 ADDITIONAL REQUIREMENTS: ${additionalPrompt || 'None'}
 
 Generate compelling, price-focused persuasion text that would accompany a ${widgetType} widget. 
@@ -557,11 +664,17 @@ The text should be:
 - Focused on savings, value, and limited-time offers
 - General enough to work with any products in this category
 - Include strong call-to-action language
+${brandStyling ? `- Reflect the brand's personality based on the font choice (${brandStyling.fonts.primary}) and color scheme
+- Use a tone that aligns with the brand's visual identity` : ''}
 
 Examples of good price-focused persuasion:
 "Limited time offer! Save up to 25% on premium gear. Don't miss these exclusive deals!"
 "Unbeatable prices on quality products! Shop now and save big before it's too late!"
 "Flash sale ends soon! Get the best deals of the season while supplies last!"
+
+${brandStyling ? `BRAND GUIDANCE:
+- Font choice "${brandStyling.fonts.primary}" suggests a certain brand personality - craft messaging that complements this
+- Primary color ${brandStyling.colors.primary} should influence the energy and tone of the messaging` : ''}
 
 Return only the persuasion text, no additional formatting or explanations.`;
 
@@ -574,6 +687,22 @@ Return only the persuasion text, no additional formatting or explanations.`;
     const category = productList.length > 0 ? productList[0].category : 'products';
     const hasDiscounts = productList.some(p => p.discount && p.discount > 0);
     const maxDiscount = hasDiscounts ? Math.max(...productList.map(p => p.discount || 0)) : 0;
+    
+    // Generate brand-aware fallback text
+    if (brandStyling) {
+      const isModernFont = ['Inter', 'Roboto', 'Montserrat', 'Poppins'].includes(brandStyling.fonts.primary);
+      const isPlayfulFont = ['Comfortaa', 'Quicksand', 'Nunito'].includes(brandStyling.fonts.primary);
+      
+      if (isPlayfulFont) {
+        return hasDiscounts 
+          ? `🎉 Amazing ${category} deals! Save up to ${maxDiscount}% - grab yours now!`
+          : `✨ Discover awesome ${category} at great prices! Shop the collection now!`;
+      } else if (isModernFont) {
+        return hasDiscounts 
+          ? `Premium ${category} on sale. Save up to ${maxDiscount}% - limited time.`
+          : `Curated ${category} collection. Exceptional quality, competitive prices.`;
+      }
+    }
     
     return hasDiscounts 
       ? `Exclusive deals on ${category}! Save up to ${maxDiscount}% - limited time only!`
@@ -645,25 +774,56 @@ function generateFallbackHtml(widgetType, productList) {
 }
 
 // Fallback CSS generator  
-function generateFallbackCss(widgetType) {
-  return `
+function generateFallbackCss(widgetType, brandStyling = null) {
+  // Use brand styling if available, otherwise default styling
+  const colors = brandStyling?.colors || {
+    primary: '#007bff',
+    secondary: '#6c757d',
+    accent: '#28a745', 
+    text: '#333333',
+    background: '#ffffff'
+  };
+  
+  const fonts = brandStyling?.fonts || {
+    primary: 'Inter',
+    secondary: 'Source Sans Pro',
+    fallback: 'sans-serif'
+  };
+
+  // Generate Google Fonts import URL
+  const fontImports = `@import url('https://fonts.googleapis.com/css2?family=${fonts.primary.replace(' ', '+')}:wght@400;500;600;700&family=${fonts.secondary.replace(' ', '+')}:wght@300;400;500&display=swap');`;
+  
+  return `${fontImports}
+
 .product-card-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   padding: 1.5rem;
+  background: ${colors.background};
+}
+@media (max-width: 768px) {
+  .product-card-container {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 1024px) and (min-width: 769px) {
+  .product-card-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 .product-card {
-  border: 1px solid #ddd;
+  border: 1px solid ${colors.secondary};
   border-radius: 12px;
   overflow: hidden;
-  background: white;
+  background: ${colors.background};
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   transition: transform 0.2s ease;
 }
 .product-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  border-color: ${colors.primary};
 }
 .product-image {
   width: 100%;
@@ -671,38 +831,44 @@ function generateFallbackCss(widgetType) {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  border-bottom: 2px solid ${colors.primary};
 }
 .product-info {
   padding: 1.25rem;
 }
 .product-name {
+  font-family: '${fonts.primary}', ${fonts.fallback};
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0 0 0.5rem 0;
-  color: #333;
+  color: ${colors.text};
 }
 .product-brand {
+  font-family: '${fonts.secondary}', ${fonts.fallback};
   font-size: 0.9rem;
-  color: #666;
+  color: ${colors.secondary};
   margin: 0 0 0.75rem 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 .product-description {
+  font-family: '${fonts.secondary}', ${fonts.fallback};
   font-size: 0.9rem;
-  color: #777;
+  color: ${colors.secondary};
   margin: 0 0 1rem 0;
   line-height: 1.4;
 }
 .product-price {
+  font-family: '${fonts.primary}', ${fonts.fallback};
   font-size: 1.1rem;
   font-weight: 700;
-  color: #333;
+  color: ${colors.text};
   margin: 0 0 1.25rem 0;
 }
 .product-discount {
-  background: #e74c3c;
-  color: white;
+  font-family: '${fonts.secondary}', ${fonts.fallback};
+  background: ${colors.accent};
+  color: ${colors.background};
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -710,8 +876,9 @@ function generateFallbackCss(widgetType) {
   margin-left: 0.5rem;
 }
 .cta-button {
-  background: #007bff;
-  color: white;
+  font-family: '${fonts.primary}', ${fonts.fallback};
+  background: ${colors.primary};
+  color: ${colors.background};
   border: none;
   padding: 12px 24px;
   border-radius: 6px;
@@ -721,7 +888,8 @@ function generateFallbackCss(widgetType) {
   transition: background-color 0.2s ease;
 }
 .cta-button:hover {
-  background: #0056b3;
+  background: ${colors.accent};
+  transform: translateY(-1px);
 }`;
 }
 

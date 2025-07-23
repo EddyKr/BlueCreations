@@ -179,7 +179,8 @@ Provide specific UI/UX recommendations with implementation details.`,
     campaignObjective,
     productList,
     additionalPrompt = "",
-    widgetType = "product_cards"
+    widgetType = "product_cards",
+    brandStyling = null
   ) {
     try {
       const prompt = {
@@ -204,24 +205,47 @@ AVAILABLE WIDGET TYPES:
         user: `CAMPAIGN OBJECTIVE:
 ${campaignObjective}
 
-PRODUCT LIST:
+PRODUCT LIST (maximum 3 products):
 ${JSON.stringify(productList, null, 2)}
 
 WIDGET TYPE: ${widgetType}
+
+${brandStyling ? `BRAND STYLING (use these for styling):
+COLORS:
+- Primary: ${brandStyling.colors.primary}
+- Secondary: ${brandStyling.colors.secondary}
+- Accent: ${brandStyling.colors.accent}
+- Text: ${brandStyling.colors.text}
+- Background: ${brandStyling.colors.background}
+
+FONTS (include Google Fonts imports):
+- Primary Font: '${brandStyling.fonts.primary}' (for headings and important text)
+- Secondary Font: '${brandStyling.fonts.secondary}' (for body text and descriptions)
+- Fallback: ${brandStyling.fonts.fallback}
+
+IMPORTANT: 
+1. Include Google Fonts import in your CSS: @import url('https://fonts.googleapis.com/css2?family=${brandStyling.fonts.primary.replace(' ', '+')}:wght@400;500;600;700&family=${brandStyling.fonts.secondary.replace(' ', '+')}:wght@300;400;500&display=swap');
+2. Use these brand colors and fonts throughout the design for consistency with the brand identity.
+3. Apply font-family: '${brandStyling.fonts.primary}', ${brandStyling.fonts.fallback}; to headings and CTAs
+4. Apply font-family: '${brandStyling.fonts.secondary}', ${brandStyling.fonts.fallback}; to body text and descriptions` : ""}
 
 ${additionalPrompt ? `ADDITIONAL REQUIREMENTS: ${additionalPrompt}` : ""}
 
 Generate a complete, embeddable HTML/CSS recommendation widget that:
 
-1. Displays the products in an attractive, conversion-focused layout
-2. Includes compelling copy aligned with the campaign objective
-3. Has clear call-to-action buttons
-4. Is fully responsive and mobile-friendly
-5. Uses modern CSS techniques (flexbox/grid)
-6. Includes hover effects and micro-interactions
-7. Has proper semantic HTML structure
-8. Can be directly copied and pasted into any website div
-9. Generate a template for the widget that can be used to generate the widget for the product list
+1. Displays exactly 3 products (or fewer if less provided) in an attractive, conversion-focused layout
+2. Uses a horizontal grid/flex layout optimized for 3 product cards
+3. Includes compelling copy aligned with the campaign objective
+4. Has clear call-to-action buttons ${brandStyling ? 'using the provided brand colors and fonts' : ''}
+5. Is fully responsive and mobile-friendly (stack vertically on mobile)
+6. Uses modern CSS techniques (flexbox/grid)
+7. Includes hover effects and micro-interactions ${brandStyling ? 'with brand color and font theming' : ''}
+8. Has proper semantic HTML structure
+9. Can be directly copied and pasted into any website div
+10. ${brandStyling ? 'Uses the brand colors and fonts consistently throughout the design' : 'Uses modern, appealing colors and fonts'}
+11. ${brandStyling ? 'Includes Google Fonts imports at the top of the CSS' : 'Uses web-safe fonts'}
+12. Optimizes the layout specifically for 3-product display (not more)
+13. Generate a template for the widget that can be used to generate the widget for the product list
 
 Return ONLY the complete HTML/CSS code (including <style> tags) that can be embedded. No explanations outside the code.`,
       };
