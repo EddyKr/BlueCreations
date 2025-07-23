@@ -91,16 +91,6 @@ USE THE ACTUAL PRODUCT IMAGE URLs PROVIDED ABOVE, NOT PLACEHOLDER IMAGES!
 
 ${brandStyling ? `
 
-  PRODUCT CARDS:
-- Image above all the text
-- Product Title: 20-28px font size, 600-800 font weight, sans-serif, dark text (#111 or #000)
-- Product Description: 16-20px font size, 300-500 font weight, sans-serif, MUST BE VISIBLE - use dark gray (#333 or #555) for readability
-- Price: 20-28px font size, 600-800 font weight, sans-serif, dark text (#111 or #000)
-- Button: 0-50px border radius, black/white high contrast, FULL WIDTH (width: 100%)
-- Button Text: 600-800 font weight, uppercase preferred
-- Layout: Clean grid, minimal gaps, high impact visuals
-- Background: Light backgrounds (#FFF, #F5F5F5, #FAFAFA) with dark text for contrast
-
 IMPORTANT: 
 1. Include Google Fonts import in your CSS: @import url('https://fonts.googleapis.com/css2?family=${brandStyling.fonts.primary.replace(' ', '+')}:wght@400;500;600;700&family=${brandStyling.fonts.secondary.replace(' ', '+')}:wght@300;400;500&display=swap');
 2. Use these brand colors and fonts throughout the design for consistency with the brand identity.
@@ -136,6 +126,14 @@ Generate a complete, embeddable HTML/CSS recommendation widget that:
     - .product-info { flex: 1; } to push buttons to bottom
     - .product-action { /* button container at bottom */ }
     - .cta-button, .product-button { width: 100%; display: block; }
+15. Product Title: 20-28px font size, 600-800 font weight, sans-serif, dark text (#111 or #000)
+- Product Description: 16-20px font size, 300-500 font weight, sans-serif, MUST BE VISIBLE - use dark gray (#333 or #555) for readability
+- Price: 20-28px font size, 600-800 font weight, sans-serif, dark text (#111 or #000)
+- Button: 0-50px border radius, black/white high contrast, FULL WIDTH (width: 100%)
+- Button Text: 600-800 font weight, uppercase preferred
+- Layout: Clean grid, minimal gaps, high impact visuals
+- Background: Light backgrounds (#FFF, #F5F5F5, #FAFAFA) with dark text for contrast
+IMPORTANT: PICK THE SIZE FOR TEXT RANDOMLY BETWEEN THE RANGES PROVIDED
 
 Return ONLY the complete HTML/CSS code (including <style> tags) that can be embedded. No explanations outside the code.`,
       };

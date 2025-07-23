@@ -116,6 +116,7 @@ router.post('/backoffice/generate', async (req, res) => {
 router.post('/backoffice/save-campaign', async (req, res) => {
   try {
     const { 
+      campaignId,
       campaignName,
       campaignObjective, 
       variation, 
@@ -150,7 +151,7 @@ router.post('/backoffice/save-campaign', async (req, res) => {
     
     // Create campaign object with targeting criteria for agent selection
     const campaign = {
-      id: campaignName, // Use campaign name as ID
+      id: campaignId, // Use campaign name as ID
       name: campaignName,
       objective: campaignObjective,
       category: category || 'all',
